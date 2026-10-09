@@ -18,7 +18,7 @@ MCP Server for Switcher API
 
 ***
 
-![Switcher API: Cloud-based Feature Flag API](https://raw.githubusercontent.com/switcherapi/switcherapi-assets/master/logo/switcherapi_grey.png)
+![Switcher API: Cloud-based Feature Flag API](https://raw.githubusercontent.com/switcherapi/switcherapi-assets/master/logo/switcherapi_mcp_server.png)
 
 # About
 
@@ -28,11 +28,7 @@ of MCP tools. It authenticates on behalf of a real Switcher API user/admin using
 Authorization Code + PKCE flow with Dynamic Client Registration, so no client secret is ever
 stored or shared.
 
-This is an MVP focused on **read-only** access:
-- Discover the domains and environments a user can access.
-- Read a feature flag's settings (enabled state, description, strategies, relay config).
-
-Write operations (creating/toggling flags) are intentionally out of scope for this MVP.
+Write operations (creating/toggling flags) are intentionally out of scope.
 
 # Quick Start
 
