@@ -8,5 +8,9 @@
     "python.testing.pytestEnabled": true,
     "editor.renderWhitespace": "trailing",
     "files.trimTrailingWhitespace": true,
-    "python-envs.defaultEnvManager": "ms-python.python:pipenv"
+    "python-envs.defaultEnvManager": "ms-python.python:pipenv",
+    "sonarlint.connectedMode.project": {
+        "connectionId": "switcherapi",
+        "projectKey": "switcherapi_switcher-mcp-server"
+    }
 }

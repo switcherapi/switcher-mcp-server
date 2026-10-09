@@ -443,10 +443,10 @@ def test_authorize_if_needed_triggers_single_authorize_for_concurrent_callers(mo
     monkeypatch.setattr(client, 'authorize', authorize_mock)
 
     async def _run_concurrent_callers() -> list[str]:
-        return await asyncio.gather(
+        return list(await asyncio.gather(
             client.authorize_if_needed(),
             client.authorize_if_needed(),
-        )
+        ))
 
     try:
         results = asyncio.run(_run_concurrent_callers())

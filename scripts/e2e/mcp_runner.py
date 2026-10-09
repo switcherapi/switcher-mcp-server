@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import sys
 from contextlib import asynccontextmanager
-from typing import Any, AsyncIterator
+from typing import Any, AsyncGenerator
 
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
@@ -24,7 +24,7 @@ class McpToolError(RuntimeError):
 
 
 @asynccontextmanager
-async def mcp_client_session(config: E2EConfig) -> AsyncIterator[ClientSession]:
+async def mcp_client_session(config: E2EConfig) -> AsyncGenerator[ClientSession, None]:
     """Spawn switcher_mcp_server over stdio and yield an initialized ClientSession."""
 
     server_params = StdioServerParameters(

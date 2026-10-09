@@ -4,16 +4,16 @@ verify_ssl = true
 name = "pypi"
 
 [packages]
-mcp = "==2.1.1"
+mcp = "==2.3.0"
 httpx = {extras = ["http2"], version = "==0.28.1"}
 pywin32 = {version = ">=311", markers = "sys_platform == 'win32'"}
 
 [dev-packages]
-pylint = "==4.0.7"
+pylint = "==4.1.2"
 pytest = "==9.1.1"
 pytest-cov = "==7.1.0"
 pytest-httpx = "==0.36.2"
-python-dotenv = "==1.2.3"
+python-dotenv = "==1.2.4"
 switcher-mcp-server = {file = ".", editable = true}
 
 [requires]
