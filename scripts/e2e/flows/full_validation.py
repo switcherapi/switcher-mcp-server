@@ -1,3 +1,4 @@
+# noqa: E402  # pylint: disable=wrong-import-position,import-error
 """Manual, configurable, real-account end-to-end validation flow.
 
 Not part of the pytest suite. Assumes the configured Switcher account,
@@ -18,9 +19,9 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from config import E2EConfigError, load_config  # noqa: E402  pylint: disable=wrong-import-position
-from mcp_runner import McpToolError, call_tool, mcp_client_session  # noqa: E402  pylint: disable=wrong-import-position
-from oauth_bootstrap import OAuthBootstrapError, bootstrap_credentials  # noqa: E402  pylint: disable=wrong-import-position
+from config import E2EConfigError, load_config
+from mcp_runner import McpToolError, call_tool, mcp_client_session
+from oauth_bootstrap import OAuthBootstrapError, bootstrap_credentials
 
 
 class ValidationError(RuntimeError):

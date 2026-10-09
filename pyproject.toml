@@ -7,7 +7,7 @@ name = "switcher-mcp-server"
 description = "MCP Server for Switcher API"
 dynamic = ["version", "readme"]
 dependencies = [
-    "mcp>=2.1.1",
+    "mcp>=2.3.0",
     "httpx[http2]>=0.28.1",
 ]
 authors = [
