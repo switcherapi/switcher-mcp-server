@@ -147,16 +147,29 @@ Example stdio configuration for an MCP client (e.g. Claude Desktop, VS Code):
 | `list_environments` | List environment names for a given domain id.                               |
 | `get_feature_flag`  | Get a feature flag's settings by key, domain name, and optional environment. |
 
+# Available Prompts
+
+Prompts are user-selectable, guided templates (e.g. shown as `/switcher_domains` in MCP clients)
+that drive one of the tools above and ask the model to summarize or analyze its result. All
+prompts are prefixed with `switcher_` for easy discovery.
+
+| Prompt                  | Drives              | Description                                                       |
+|--------------------------|----------------------|---------------------------------------------------------------------|
+| `switcher_domains`       | `list_domains`       | Summarize accessible domains and flag any that are not activated.   |
+| `switcher_environments`  | `list_environments`  | List a domain's environments and flag an incomplete/missing set.    |
+| `switcher_get_feature`   | `get_feature_flag`   | Analyze a flag's settings and warn about risky or disabled config.  |
+
 # Development
 
 ## Quality Gate
 
 ```bash
-make install   # pipenv install --dev
-make lint      # pylint switcher_mcp_server
-make test      # pytest with coverage (coverage.xml)
-make cover     # generate an HTML coverage report (htmlcov/)
-make e2e       # manual, configurable e2e validation (see scripts/e2e/README.md)
+make install      # pipenv install --dev
+make lint         # pylint switcher_mcp_server
+make test         # pytest with coverage (coverage.xml)
+make cover        # generate an HTML coverage report (htmlcov/)
+make e2e-tools    # manual, configurable e2e tool validation (see scripts/e2e/README.md)
+make e2e-prompts  # manual, configurable e2e prompt validation (see scripts/e2e/README.md)
 ```
 
 Both `pylint` and `pytest` must pass before merging changes. Tests use `pytest-httpx` to mock all

@@ -1,4 +1,4 @@
-.PHONY: install lint test cover e2e
+.PHONY: install lint test cover e2e-tools e2e-prompts
 
 install:
 	pipenv install --dev
@@ -12,8 +12,11 @@ test:
 cover:
 	pipenv run coverage html
 
-e2e:
-	pipenv run python scripts/e2e/flows/full_validation.py
+e2e-tools:
+	pipenv run python scripts/e2e/flows/tools_validation.py
+
+e2e-prompts:
+	pipenv run python scripts/e2e/flows/prompt_validation.py
 
 run:
 	pipenv run python -m switcher_mcp_server.server --transport streamable-http --host 0.0.0.0 --port 8000

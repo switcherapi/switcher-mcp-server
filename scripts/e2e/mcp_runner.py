@@ -59,3 +59,18 @@ async def call_tool(session: ClientSession, name: str, arguments: dict[str, Any]
         raise McpToolError(f"Tool '{name}' returned an error: {' '.join(text_parts) or result.content}")
 
     return _unwrap_structured_content(result.structured_content)
+
+
+async def get_prompt_text(session: ClientSession, name: str, arguments: dict[str, str] | None = None) -> str:
+    """Fetch an MCP prompt and return the text of its single generated user message."""
+
+    result = await session.get_prompt(name, arguments or {})
+    if not result.messages:
+        raise McpToolError(f"Prompt '{name}' returned no messages.")
+
+    content = result.messages[0].content
+    text = getattr(content, 'text', None)
+    if text is None:
+        raise McpToolError(f"Prompt '{name}' returned a non-text message: {content!r}")
+
+    return text

@@ -41,3 +41,19 @@ async def get_feature_flag(key: str, domain: str, environment: str | None = None
     api_client = get_api_client()
     config = await api_client.get_config_by_key(key, domain, environment)
     return _shape_response(config)
+
+
+@mcp.prompt(description="Fetch a Switcher feature flag's settings.")
+def switcher_get_feature(key: str, domain: str, environment: str | None = None) -> str:
+    """Build a guided message that drives the get_feature_flag tool."""
+
+    call_args = f"key='{key}', domain='{domain}'"
+    scope = f"environment '{environment}'" if environment else 'its default environment'
+    if environment:
+        call_args += f", environment='{environment}'"
+
+    return (
+        f'Call the get_feature_flag tool with {call_args} to inspect {scope}. '
+        'Summarize the returned feature flag settings in a table with columns '
+        'key, description, activated.'
+    )

@@ -132,3 +132,39 @@ def test_list_environments_validates_input_and_skips_unnamed(monkeypatch) -> Non
     monkeypatch.setattr(context_tools, '_get_api_client', lambda: fake_api_client)
 
     assert asyncio.run(context_tools.list_environments('d1')) == ['prod']
+
+
+def test_prompts_are_registered_on_the_shared_mcp_server() -> None:
+    """Shared MCP server should expose the context prompts."""
+
+    registered_prompts = asyncio.run(context_tools.get_mcp_server().list_prompts())
+    prompt_names = {prompt.name for prompt in registered_prompts}
+
+    assert {'switcher_domains', 'switcher_environments'}.issubset(prompt_names)
+
+
+def _prompt_text(result) -> str:
+    """Extract the plain text payload from a GetPromptResult's single message."""
+
+    return result.messages[0].content.text
+
+
+def test_switcher_domains_prompt_mentions_tool_and_arguments() -> None:
+    """switcher_domains prompt should instruct the model to call list_domains with the given flag."""
+
+    result = asyncio.run(context_tools.mcp.get_prompt('switcher_domains', {'include_collaborations': False}))
+    text = _prompt_text(result)
+
+    assert 'list_domains' in text
+    assert 'include_collaborations=False' in text
+    assert 'no collaborations' in text
+
+
+def test_switcher_environments_prompt_mentions_tool_and_domain() -> None:
+    """switcher_environments prompt should instruct the model to call list_environments with the domain id."""
+
+    result = asyncio.run(context_tools.mcp.get_prompt('switcher_environments', {'domain_id': 'domain-1'}))
+    text = _prompt_text(result)
+
+    assert 'list_environments' in text
+    assert 'domain-1' in text
