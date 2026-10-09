@@ -6,7 +6,7 @@ domain, and feature flag already exist (real-world usage) -- this script
 does not sign up accounts or create any data.
 
 Usage:
-    pipenv run python scripts/e2e/flows/full_validation.py
+    pipenv run python scripts/e2e/flows/tools_validation.py
 
 Configuration: see scripts/e2e/README.md and scripts/e2e/.env.e2e.example.
 """

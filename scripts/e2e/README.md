@@ -7,7 +7,7 @@ manually when you want to sanity-check real changes across the stack.
 
 ## What this is for
 
-`full_validation.py` drives the **real** `switcher_mcp_server` process (spawned
+`tools_validation.py` drives the **real** `switcher_mcp_server` process (spawned
 as a subprocess, talking over the official MCP stdio client SDK) through the
 same tool calls a real MCP client would make:
 
@@ -23,6 +23,12 @@ not sign up accounts or create any data. This intentionally emulates
 real-world usage instead of a synthetic throwaway fixture, so you can point it
 at any test account/domain/flag you already maintain and just swap
 credentials/URLs to test a different environment.
+
+`prompt_validation.py` reuses the same bootstrap/config/subprocess machinery
+but instead renders the `switcher_domains`, `switcher_environments`, and
+`switcher_get_feature` **prompts** (via `prompts/get`) and asserts the
+generated guidance text references the right tool and embeds the configured
+domain/key/environment arguments. It does not call the underlying tools.
 
 ## Prerequisites
 
@@ -62,9 +68,14 @@ variables directly before running.
 ## Running
 
 ```bash
-pipenv run python scripts/e2e/flows/full_validation.py
+pipenv run python scripts/e2e/flows/tools_validation.py
 # or, from the repo root:
-make e2e
+make e2e-tools
+
+# to validate the prompts instead of the tools:
+pipenv run python scripts/e2e/flows/prompt_validation.py
+# or, from the repo root:
+make e2e-prompts
 ```
 
 Exits non-zero and prints a clear error on any failed assertion, config error,
@@ -86,7 +97,8 @@ scripts/e2e/
   oauth_bootstrap.py # shared headless OAuth bootstrap helper
   mcp_runner.py       # shared helper to spawn the server and call tools
   flows/
-    full_validation.py   # existing: read-only validation of an existing account/domain/flag
+    tools_validation.py  # existing: read-only validation of an existing account/domain/flag
+    prompt_validation.py # existing: validates the switcher_* prompts render correctly
     <your_new_flow>.py    # add new scenarios here, reusing the shared helpers above
 ```
 

@@ -113,3 +113,27 @@ async def list_environments(domain_id: str) -> list[str]:
         ],
         key=str.lower,
     )
+
+
+@mcp.prompt(description='Discover and summarize the Switcher domains accessible to the authenticated user.')
+def switcher_domains(include_collaborations: bool = True) -> str:
+    """Build a guided message that drives the list_domains tool and summarizes the result."""
+
+    collaboration_note = (
+        'including team collaborations' if include_collaborations else 'owned domains only, no collaborations'
+    )
+    return (
+        f'Call the list_domains tool with include_collaborations={include_collaborations} '
+        f'({collaboration_note}). Summarize the returned domains in a table with columns '
+        'name, description, and activated.'
+    )
+
+
+@mcp.prompt(description="List a Switcher domain's environments.")
+def switcher_environments(domain_id: str) -> str:
+    """Build a guided message that drives the list_environments tool."""
+
+    return (
+        f"Call the list_environments tool with domain_id='{domain_id}'. "
+        "List the returned environment names"
+    )
