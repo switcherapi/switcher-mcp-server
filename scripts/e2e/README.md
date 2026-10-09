@@ -24,12 +24,6 @@ real-world usage instead of a synthetic throwaway fixture, so you can point it
 at any test account/domain/flag you already maintain and just swap
 credentials/URLs to test a different environment.
 
-This is different from [`scripts/e2e_validate.py`](../e2e_validate.py), which
-signs up a throwaway admin, creates a fresh domain/group/flag, and talks to
-switcher-api directly over HTTP (no MCP server involved at all). Use that one
-instead if you want a fully disposable, self-contained sanity check of a local
-switcher-api build with no pre-existing data.
-
 ## Prerequisites
 
 - A reachable `switcher-api` instance with OAuth support.
@@ -80,13 +74,7 @@ OAuth bootstrap failure, or tool-call error.
 
 Real MCP clients open a browser to switcher-management's consent screen. This
 script instead logs into switcher-api directly with the configured account's
-session JWT and calls `/oauth/authorize?...&consent=true`, which is the same
-technique already used by `scripts/e2e_validate.py`. This exercises the exact
-same `/oauth/register` → `/oauth/authorize` → `/oauth/token` endpoints as
-production — only the human consent click is skipped so the flow can run
-unattended. `switcher-management` itself is not called by this flow today;
-`SWITCHER_MANAGEMENT_URL` is configured and documented for future flows that
-might.
+session JWT and calls `/oauth/authorize?...&consent=true`.
 
 ## Adding new flows
 
