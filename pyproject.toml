@@ -1,0 +1,57 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "switcher-mcp-server"
+description = "MCP Server for Switcher API"
+dynamic = ["version", "readme"]
+dependencies = [
+    "mcp>=2.1.1",
+    "httpx[http2]>=0.28.1",
+]
+authors = [
+    {name = "Roger Floriano (petruki)"},
+    {email = "switcher.project@gmail.com"},
+]
+license = "MIT"
+license-files = ["LICENSE"]
+requires-python = ">=3.14"
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.14",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: Implementation :: CPython",
+    "Operating System :: OS Independent",
+]
+
+[project.urls]
+homepage = "https://github.com/switcherapi"
+source = "https://github.com/switcherapi/switcher-mcp-server"
+issue-tracker = "https://github.com/switcherapi/switcher-mcp-server/issues"
+
+[project.scripts]
+switcher-mcp-server = "switcher_mcp_server.server:main"
+
+[tool.setuptools.packages.find]
+include = ["switcher_mcp_server*"]
+
+[tool.setuptools.dynamic]
+version = { attr = "switcher_mcp_server.__version__" }
+readme = { file = ["README.md"], content-type = "text/markdown" }
+
+[tool.pylint.main]
+source-roots = ["switcher_mcp_server"]
+
+[tool.pylint.messages_control]
+max-line-length = 120
+disable = [
+    "missing-module-docstring",
+    "missing-function-docstring"
+]
+
+[tool.pylint.format]
+max-line-length = 120

@@ -1,0 +1,21 @@
+{
+    "name": "Switcher MCP Server Dev Container",
+    "dockerComposeFile": [
+        "docker-compose.yml"
+    ],
+    "service": "switcher-mcp-server",
+    "workspaceFolder": "/workspace",
+	"customizations":{
+		"vscode": {
+			"extensions": [
+				"ms-python.debugpy",
+				"ms-python.python",
+				"ms-python.vscode-pylance"
+			],
+			"settings": {
+				"terminal.integrated.shell.linux": "/bin/bash"
+			}
+		}
+	},
+	"postCreateCommand": "python3 -m venv /workspace/.venv"
+}

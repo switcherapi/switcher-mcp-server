@@ -1,0 +1,12 @@
+{
+    "pylint.importStrategy": "fromEnvironment",
+    "pylint.ignorePatterns": ["**/tests/**"],
+    "python.testing.pytestArgs": [
+        "tests", "-s", "-v"
+    ],
+    "python.testing.unittestEnabled": false,
+    "python.testing.pytestEnabled": true,
+    "editor.renderWhitespace": "trailing",
+    "files.trimTrailingWhitespace": true,
+    "python-envs.defaultEnvManager": "ms-python.python:pipenv"
+}

@@ -1,0 +1,17 @@
+[run]
+branch = True
+source = switcher_mcp_server
+omit =
+    switcher_mcp_server/__init__.py
+    */tests/*
+    */test_*
+
+[report]
+fail_under = 100
+show_missing = True
+exclude_lines =
+    pragma: no cover
+    def __repr__
+    raise AssertionError
+    raise NotImplementedError
+    if __name__ == .__main__.:
