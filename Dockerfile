@@ -13,7 +13,7 @@ RUN pip install --upgrade pip && \
     pipenv install --deploy --system --ignore-pipfile && \
     pip uninstall -y pipenv
 
-COPY /src .
+COPY /switcher_mcp_server .
 
 RUN chown -R app:app "$APP_HOME"
 USER app
