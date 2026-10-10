@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from switcher_mcp_server.tools.context_tools import get_api_client, mcp
+from switcher_mcp_server.tools.shared import get_api_client, mcp
 
 
 def _shape_response(config: dict[str, Any]) -> dict[str, Any]:
