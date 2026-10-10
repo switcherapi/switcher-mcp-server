@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from mcp.server import MCPServer
+from mcp.server.auth.middleware.auth_context import get_access_token
 
 from switcher_mcp_server import __version__
 from switcher_mcp_server.api_client import SwitcherApiClient
@@ -16,6 +17,22 @@ mcp = MCPServer(
 )
 
 _API_CLIENT: SwitcherApiClient | None = None
+_REQUEST_TOKEN_AUTH = False
+
+
+def enable_request_token_auth() -> None:
+    """Switch the API client to forward the caller's bearer token (streamable HTTP mode)."""
+
+    global _REQUEST_TOKEN_AUTH, _API_CLIENT  # pylint: disable=global-statement
+    _REQUEST_TOKEN_AUTH = True
+    _API_CLIENT = None
+
+
+def _get_request_token() -> str | None:
+    """Return the bearer token of the current MCP request, if any."""
+
+    access_token = get_access_token()
+    return access_token.token if access_token else None
 
 
 def get_mcp_server() -> MCPServer[None]:
@@ -38,6 +55,13 @@ def _get_api_client() -> SwitcherApiClient:
         return _API_CLIENT
 
     oauth_client = SwitcherOAuthClient()
+    if _REQUEST_TOKEN_AUTH:
+        _API_CLIENT = SwitcherApiClient(
+            base_url=oauth_client.base_url,
+            request_token_getter=_get_request_token,
+        )
+        return _API_CLIENT
+
     _API_CLIENT = SwitcherApiClient(
         oauth_client=oauth_client,
         base_url=oauth_client.base_url,
