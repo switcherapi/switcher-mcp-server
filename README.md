@@ -28,7 +28,7 @@ of MCP tools. It authenticates on behalf of a real Switcher API user/admin using
 Authorization Code + PKCE flow with Dynamic Client Registration, so no client secret is ever
 stored or shared.
 
-Write operations (creating/toggling flags) are intentionally out of scope.
+Toggling feature flags will not be supported by this MCP Server for security and consistency reasons.
 
 # Quick Start
 
@@ -155,9 +155,9 @@ prompts are prefixed with `switcher_` for easy discovery.
 
 | Prompt                  | Drives              | Description                                                       |
 |--------------------------|----------------------|---------------------------------------------------------------------|
-| `switcher_domains`       | `list_domains`       | Summarize accessible domains and flag any that are not activated.   |
-| `switcher_environments`  | `list_environments`  | List a domain's environments and flag an incomplete/missing set.    |
-| `switcher_get_feature`   | `get_feature_flag`   | Analyze a flag's settings and warn about risky or disabled config.  |
+| `switcher_domains`       | `list_domains`       | Discover and summarize the Switcher domains accessible to the authenticated user. |
+| `switcher_environments`  | `list_environments`  | List a Switcher domain's environments. |
+| `switcher_get_feature`   | `get_feature_flag`   | Fetch a Switcher feature flag's settings. |
 
 # Development
 
@@ -201,8 +201,10 @@ switcher_mcp_server/
     api_client.py         # Authenticated async HTTP client for switcher-api
     server.py             # Entrypoint wiring tools to the stdio/streamable-http transports
     tools/
-        context_tools.py  # list_domains / list_environments
-        flag_tools.py     # get_feature_flag
+        shared.py            # Shared MCP server instance and API client
+        domain_tools.py       # list_domains
+        environment_tools.py  # list_environments
+        switcher_tools.py     # get_feature_flag
 tests/                    # pytest suite (unit + transport integration tests)
 ```
 

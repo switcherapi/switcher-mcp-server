@@ -7,7 +7,7 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from switcher_mcp_server.tools import flag_tools
+from switcher_mcp_server.tools import switcher_tools
 
 
 def test_get_feature_flag_shapes_config_response(monkeypatch) -> None:
@@ -26,9 +26,9 @@ def test_get_feature_flag_shapes_config_response(monkeypatch) -> None:
         'configStrategy': [],
     }
 
-    monkeypatch.setattr(flag_tools, 'get_api_client', lambda: fake_api_client)
+    monkeypatch.setattr(switcher_tools, 'get_api_client', lambda: fake_api_client)
 
-    result = asyncio.run(flag_tools.get_feature_flag('MY_FLAG', 'Main Domain'))
+    result = asyncio.run(switcher_tools.get_feature_flag('MY_FLAG', 'Main Domain'))
 
     assert result == {
         'key': 'MY_FLAG',
@@ -50,9 +50,9 @@ def test_get_feature_flag_passes_environment_through(monkeypatch) -> None:
     fake_api_client = AsyncMock()
     fake_api_client.get_config_by_key.return_value = {'key': 'MY_FLAG', 'enabled': False}
 
-    monkeypatch.setattr(flag_tools, 'get_api_client', lambda: fake_api_client)
+    monkeypatch.setattr(switcher_tools, 'get_api_client', lambda: fake_api_client)
 
-    asyncio.run(flag_tools.get_feature_flag('MY_FLAG', 'Main Domain', 'production'))
+    asyncio.run(switcher_tools.get_feature_flag('MY_FLAG', 'Main Domain', 'production'))
 
     fake_api_client.get_config_by_key.assert_awaited_once_with('MY_FLAG', 'Main Domain', 'production')
 
@@ -61,20 +61,20 @@ def test_get_feature_flag_requires_key() -> None:
     """Tool should reject empty keys before calling the API client."""
 
     with pytest.raises(ValueError, match='key is required'):
-        asyncio.run(flag_tools.get_feature_flag('', 'Main Domain'))
+        asyncio.run(switcher_tools.get_feature_flag('', 'Main Domain'))
 
 
 def test_get_feature_flag_requires_domain() -> None:
     """Tool should reject empty domains before calling the API client."""
 
     with pytest.raises(ValueError, match='domain is required'):
-        asyncio.run(flag_tools.get_feature_flag('MY_FLAG', ''))
+        asyncio.run(switcher_tools.get_feature_flag('MY_FLAG', ''))
 
 
 def test_get_feature_flag_is_registered_on_the_shared_mcp_server() -> None:
     """Shared MCP server should expose the get_feature_flag tool."""
 
-    registered_tools = asyncio.run(flag_tools.mcp.list_tools())
+    registered_tools = asyncio.run(switcher_tools.mcp.list_tools())
     tool_names = sorted(tool.name for tool in registered_tools)
 
     assert 'get_feature_flag' in tool_names
@@ -89,7 +89,7 @@ def _prompt_text(result) -> str:
 def test_switcher_get_feature_prompt_is_registered_on_the_shared_mcp_server() -> None:
     """Shared MCP server should expose the switcher_get_feature prompt."""
 
-    registered_prompts = asyncio.run(flag_tools.mcp.list_prompts())
+    registered_prompts = asyncio.run(switcher_tools.mcp.list_prompts())
     prompt_names = {prompt.name for prompt in registered_prompts}
 
     assert 'switcher_get_feature' in prompt_names
@@ -98,7 +98,9 @@ def test_switcher_get_feature_prompt_is_registered_on_the_shared_mcp_server() ->
 def test_switcher_get_feature_prompt_without_environment() -> None:
     """Prompt should mention the default environment scope when none is given."""
 
-    result = asyncio.run(flag_tools.mcp.get_prompt('switcher_get_feature', {'key': 'MY_FLAG', 'domain': 'Main Domain'}))
+    result = asyncio.run(
+        switcher_tools.mcp.get_prompt('switcher_get_feature', {'key': 'MY_FLAG', 'domain': 'Main Domain'})
+    )
     text = _prompt_text(result)
 
     assert 'get_feature_flag' in text
@@ -111,7 +113,7 @@ def test_switcher_get_feature_prompt_with_environment() -> None:
     """Prompt should mention the explicit environment when provided."""
 
     result = asyncio.run(
-        flag_tools.mcp.get_prompt(
+        switcher_tools.mcp.get_prompt(
             'switcher_get_feature',
             {'key': 'MY_FLAG', 'domain': 'Main Domain', 'environment': 'production'},
         )
