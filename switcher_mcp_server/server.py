@@ -11,6 +11,7 @@ import os
 from typing import Sequence
 
 from switcher_mcp_server.tools import get_mcp_server
+from switcher_mcp_server.auth import configure_http_auth
 
 DEFAULT_TRANSPORT = 'stdio'
 DEFAULT_HOST = '127.0.0.1'
@@ -41,6 +42,12 @@ def _build_arg_parser() -> argparse.ArgumentParser:
         default=int(os.getenv('SWITCHER_MCP_PORT', str(DEFAULT_PORT))),
         help='Port to bind the streamable HTTP transport to (default: 8000).',
     )
+    parser.add_argument(
+        '--public-url',
+        default=os.getenv('SWITCHER_MCP_PUBLIC_URL'),
+        help='Externally reachable URL of this MCP server, used as the OAuth resource identifier '
+        '(default: http://<host>:<port>). http:// is accepted for development only.',
+    )
     return parser
 
 
@@ -53,6 +60,7 @@ def main(argv: Sequence[str] | None = None) -> None:
     if args.transport == 'stdio':
         server.run(transport='stdio')
     else:
+        configure_http_auth(server, args.host, args.port, args.public_url)
         server.run(transport='streamable-http', host=args.host, port=args.port)
 
 

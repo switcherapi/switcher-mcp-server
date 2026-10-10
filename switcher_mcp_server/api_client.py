@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 import os
-from typing import Any, Awaitable, Callable, cast
+import asyncio
+from typing import Any, Awaitable, Callable
 
 import httpx
 
@@ -27,7 +28,7 @@ class SwitcherApiError(RuntimeError):
 class SwitcherApiClient:
     """Authenticated async wrapper around the Switcher API context endpoints."""
 
-    def __init__(
+    def __init__(  # pylint: disable=too-many-arguments
         self,
         *,
         token_provider: Callable[[], Awaitable[str]] | None = None,
@@ -35,15 +36,19 @@ class SwitcherApiClient:
         base_url: str | None = None,
         timeout: float = 10.0,
         http_client: httpx.AsyncClient | None = None,
+        request_token_getter: Callable[[], str | None] | None = None,
     ) -> None:
-        owns_oauth_client = token_provider is None and oauth_client is None
+        self._request_token_getter = request_token_getter
+        owns_oauth_client = token_provider is None and oauth_client is None and request_token_getter is None
         if owns_oauth_client:
             oauth_client = SwitcherOAuthClient(base_url=base_url)
 
         self._oauth_client = oauth_client
         self._owns_oauth_client = owns_oauth_client
-        if token_provider is None:
-            token_provider = cast(SwitcherOAuthClient, oauth_client).get_valid_access_token
+        if token_provider is None and request_token_getter is not None:
+            token_provider = self._request_token_provider
+        elif token_provider is None and oauth_client is not None:
+            token_provider = oauth_client.get_valid_access_token
 
         self._token_provider = token_provider
         self._base_url = (base_url or os.getenv('SWITCHER_API_URL', DEFAULT_SWITCHER_API_URL)).rstrip('/')
@@ -88,11 +93,24 @@ class SwitcherApiClient:
 
         return await self._request_json('GET', f'/config/key/{key}', params=params)
 
+    async def _request_token_provider(self) -> str:
+        """Return the bearer token sent by the MCP client; never opens a local browser."""
+
+        token = await asyncio.to_thread(self._request_token_getter) if self._request_token_getter else None
+        if not token:
+            raise SwitcherApiError(
+                'The MCP request did not carry a Switcher access token. '
+                'Authorize the MCP client against this server and retry.',
+                status_code=401,
+            )
+
+        return token
+
     async def _get_token_with_recovery(self) -> str:
         """Fetch a token, transparently running the browser authorization flow if needed."""
 
         try:
-            return await self._token_provider()
+            return await self._token_provider() # type: ignore
         except SwitcherAuthorizationRequiredError:
             if self._oauth_client is None:
                 raise  # no oauth client to recover with (e.g. tests using a bare token_provider)
@@ -140,6 +158,8 @@ class SwitcherApiClient:
                 f'Switcher API request failed for {method} {path}: '
                 f'HTTP {response.status_code} returned {response_body}'
             )
+            if response.status_code == 401 and self._request_token_getter is not None:
+                message += ' The access token was rejected; re-authorize the MCP client and retry.'
             raise SwitcherApiError(
                 message,
                 status_code=response.status_code,

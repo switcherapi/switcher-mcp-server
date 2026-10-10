@@ -34,56 +34,59 @@ Toggling feature flags will not be supported by this MCP Server for security and
 
 ### Requirements
 
-- Python 3.14+ (see `requires-python` in `pyproject.toml`)
+- Python 3.14+
 - [pipenv](https://pipenv.pypa.io/) for dependency management
-- A running [switcher-api](https://github.com/switcherapi/switcher-api) instance with OAuth
-  support (authorization server + `/config/key/:key` endpoint)
+- A running [switcher-api](https://github.com/switcherapi/switcher-api) instance with OAuth enabled
 - A [switcher-management](https://github.com/switcherapi/switcher-management) instance for the
   browser-based consent screen (`/oauth/consent`)
 
-### Installation
-
-```bash
-git clone https://github.com/switcherapi/switcher-mcp-server.git
-cd switcher-mcp-server
-
-# Reuses the project-local .venv if present, otherwise pipenv creates one.
-make install
-```
-
-`make install` runs `pipenv install --dev`, installing both runtime dependencies (`mcp`, `httpx`)
-and development dependencies (`pylint`, `pytest`, `pytest-cov`, `pytest-httpx`) into the
-project's virtual environment.
-
 # Authentication
 
-The first time a tool call needs a Switcher API token and none is cached (or the cached one can't
-be refreshed), the server transparently runs the browser-based authorization flow before retrying
-the call — the browser is **not** opened eagerly on server startup. That flow:
+How authentication works depends on the transport.
+
+### Streamable HTTP transport
+
+The MCP client (VS Code, Claude, etc.) performs the OAuth flow itself, **on the user's machine**,
+when it registers/connects to the MCP server. The server never opens a browser or stores
+credentials:
+
+1. The client calls `/mcp` without a token and receives a `401` challenge whose
+   `resource_metadata` points to the server's protected-resource metadata.
+2. The metadata advertises switcher-api as the authorization server. The client discovers its
+   OAuth metadata and dynamically registers via `POST /oauth/register` (public, PKCE-only client).
+3. The client opens the consent page in the user's browser (switcher-management's `/oauth/consent`),
+   which happens during MCP registration.
+4. The client exchanges the code for tokens via `POST /oauth/token` and sends the access token as a
+   bearer token on every MCP request. The server forwards it to switcher-api, which validates it
+   and its scopes.
+
+If the token is rejected (e.g. consent revoked), tool calls fail with an error asking you to
+re-authorize the MCP client. Set `SWITCHER_MCP_PUBLIC_URL` when the server is reachable through a
+different URL than `http://<host>:<port>`.
+
+### Stdio transport
+
+The server is a local subprocess of the client, so it runs the authorization flow itself. When a
+tool call needs a Switcher API token and none is cached (or the cached one can't be refreshed), it
+runs the browser-based flow before retrying the call — the browser is **not** opened eagerly on
+server startup. That flow:
 
 1. Discovers switcher-api's OAuth metadata from
    `GET {SWITCHER_API_URL}/.well-known/oauth-authorization-server`.
 2. Dynamically registers itself as an OAuth client via `POST /oauth/register` (no client secret
    — a public, PKCE-only client) and persists the issued `client_id` locally.
-3. Opens your default browser, **on the machine running the MCP server process**, to
+3. Opens your default browser (the server runs on your machine) to
    switcher-management's consent screen so you can log in (if needed) and approve access.
 4. Receives the authorization code on a local loopback callback (`http://127.0.0.1:<port>/callback`)
    and exchanges it for an access/refresh token pair via `POST /oauth/token`.
 
-Credentials (client id, tokens, expiry) are cached at `~/.switcher-mcp/credentials.json`
+In stdio mode, credentials (client id, tokens, expiry) are cached at `~/.switcher-mcp/credentials.json`
 (file permissions restricted to the current user on POSIX systems) and refreshed automatically
 using the rotating refresh token. If the refresh token itself expires, the next tool call will
 reopen the browser to re-authorize automatically; if you never complete the consent step, the
 authorization attempt times out and the tool call fails with an error telling you to retry.
 
 You can revoke access at any time from switcher-management's **Settings → Authorized Apps** page.
-
-> **Note on `streamable-http`:** because the browser is opened on the server's own host, automatic
-> authorization only works cleanly when the server and the browser approving access belong to the
-> same single user on the same machine (e.g. local development). A hosted, multi-tenant
-> `streamable-http` deployment serving multiple remote users would need a per-session credential
-> store and a way to hand the authorize URL back to the remote client instead of opening a local
-> browser — that is not implemented yet.
 
 # Running the Server
 
@@ -116,6 +119,7 @@ The server will be reachable at `http://<host>:<port>/mcp`.
 | `SWITCHER_MCP_TRANSPORT`  | `--transport`     | `stdio`              | `stdio` or `streamable-http`                   |
 | `SWITCHER_MCP_HOST`       | `--host`          | `127.0.0.1`          | Bind host for the streamable HTTP transport    |
 | `SWITCHER_MCP_PORT`       | `--port`          | `8000`               | Bind port for the streamable HTTP transport    |
+| `SWITCHER_MCP_PUBLIC_URL` | `--public-url`    | `http://<host>:<port>` | Externally reachable MCP URL used as the OAuth resource identifier (streamable HTTP only) |
 | `SWITCHER_MCP_CREDENTIALS_PATH` | —           | `~/.switcher-mcp/credentials.json` | Override the persisted OAuth credentials cache location |
 
 CLI flags take precedence over environment variables.
@@ -175,24 +179,6 @@ make e2e-prompts  # manual, configurable e2e prompt validation (see scripts/e2e/
 Both `pylint` and `pytest` must pass before merging changes. Tests use `pytest-httpx` to mock all
 outbound HTTP calls to switcher-api — no live server is required to run the test suite.
 
-## Manual End-to-End Validation
-
-`scripts/e2e_validate.py` is a standalone script (not part of the automated pytest suite) that
-exercises the full OAuth + config-by-key flow against a **live** switcher-api instance backed by
-a real MongoDB. Use it to sanity-check a local switcher-api build:
-
-```bash
-pipenv run python scripts/e2e_validate.py
-```
-
-It signs up a throwaway admin, registers an OAuth client, completes the PKCE authorize/token
-exchange, and calls `/domain`, `/environment`, and `/config/key/:key` using only the issued OAuth
-access token.
-
-For a configurable flow that drives the **real** `switcher_mcp_server` process (over the MCP
-stdio transport) against an **existing** account/domain/flag — with switchable switcher-api and
-switcher-management endpoints — see [`scripts/e2e/README.md`](scripts/e2e/README.md).
-
 ## Project Layout
 
 ```
@@ -200,11 +186,7 @@ switcher_mcp_server/
     oauth_client.py       # OAuth 2.1 + PKCE client (registration, authorize, token, refresh)
     api_client.py         # Authenticated async HTTP client for switcher-api
     server.py             # Entrypoint wiring tools to the stdio/streamable-http transports
-    tools/
-        shared.py            # Shared MCP server instance and API client
-        domain_tools.py       # list_domains
-        environment_tools.py  # list_environments
-        switcher_tools.py     # get_feature_flag
+    tools/                # MCP server tools (list_domains, list_environments, get_feature_flag)
 tests/                    # pytest suite (unit + transport integration tests)
 ```
 
