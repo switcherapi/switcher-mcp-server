@@ -1,0 +1,14 @@
+services:
+  switcher-mcp-server:
+    image: trackerforce/switcher-mcp-server:dev
+    container_name: switcher-mcp-server
+    command: python -m switcher_mcp_server.server
+    ports:
+      - 8000:8000
+    environment:
+      - SWITCHER_MCP_TRANSPORT=streamable-http
+      - SWITCHER_MCP_HOST=0.0.0.0
+      - SWITCHER_MCP_PORT=8000
+      - SWITCHER_API_URL=http://127.0.0.1:3000
+      - SWITCHER_MCP_PUBLIC_URL=http://127.0.0.1:8000
+      # - SWITCHER_MCP_CREDENTIALS_PATH=/etc/certs/[replace].json

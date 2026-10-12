@@ -24,7 +24,7 @@ def test_list_domains_returns_json_payload(httpx_mock) -> None:
     client = SwitcherApiClient(token_provider=_static_token_provider)
     httpx_mock.add_response(
         method='GET',
-        url='http://localhost:3000/domain',
+        url='http://127.0.0.1:3000/domain',
         json=[{'_id': 'domain-1', 'name': 'Main Domain'}],
     )
 
@@ -41,7 +41,7 @@ def test_list_domain_collaborations_returns_json_payload(httpx_mock) -> None:
     client = SwitcherApiClient(token_provider=_static_token_provider)
     httpx_mock.add_response(
         method='GET',
-        url='http://localhost:3000/domain/collaboration',
+        url='http://127.0.0.1:3000/domain/collaboration',
         json=[{'_id': 'domain-2', 'name': 'Shared Domain'}],
     )
 
@@ -58,7 +58,7 @@ def test_list_environments_passes_domain_id_query_parameter(httpx_mock) -> None:
     client = SwitcherApiClient(token_provider=_static_token_provider)
     httpx_mock.add_response(
         method='GET',
-        url='http://localhost:3000/environment?domain=domain-1',
+        url='http://127.0.0.1:3000/environment?domain=domain-1',
         json=[{'_id': 'env-1', 'name': 'default'}],
     )
 
@@ -75,7 +75,7 @@ def test_get_config_by_key_includes_domain_and_environment_query(httpx_mock) -> 
     client = SwitcherApiClient(token_provider=_static_token_provider)
     httpx_mock.add_response(
         method='GET',
-        url='http://localhost:3000/config/key/sample-flag?domain=Main%20Domain&environment=production',
+        url='http://127.0.0.1:3000/config/key/sample-flag?domain=Main%20Domain&environment=production',
         json={'key': 'sample-flag', 'enabled': True},
     )
 
@@ -92,7 +92,7 @@ def test_api_client_raises_switcher_api_error_for_non_success_responses(httpx_mo
     client = SwitcherApiClient(token_provider=_static_token_provider)
     httpx_mock.add_response(
         method='GET',
-        url='http://localhost:3000/domain',
+        url='http://127.0.0.1:3000/domain',
         status_code=401,
         json={'error': 'unauthorized'},
     )
@@ -127,7 +127,7 @@ def test_api_client_recovers_via_oauth_client_authorize_if_needed(httpx_mock) ->
     client = SwitcherApiClient(token_provider=token_provider, oauth_client=oauth_client)
     httpx_mock.add_response(
         method='GET',
-        url='http://localhost:3000/domain',
+        url='http://127.0.0.1:3000/domain',
         json=[{'_id': 'domain-1', 'name': 'Main Domain'}],
     )
 
@@ -148,10 +148,10 @@ def test_api_client_retries_once_after_401_by_invalidating_cached_token(httpx_mo
     oauth_client.invalidate_access_token = lambda: None
 
     client = SwitcherApiClient(token_provider=token_provider, oauth_client=oauth_client)
-    httpx_mock.add_response(method='GET', url='http://localhost:3000/domain', status_code=401)
+    httpx_mock.add_response(method='GET', url='http://127.0.0.1:3000/domain', status_code=401)
     httpx_mock.add_response(
         method='GET',
-        url='http://localhost:3000/domain',
+        url='http://127.0.0.1:3000/domain',
         json=[{'_id': 'domain-1', 'name': 'Main Domain'}],
     )
 
@@ -172,8 +172,8 @@ def test_api_client_does_not_retry_401_when_second_attempt_also_fails(httpx_mock
     oauth_client.invalidate_access_token = lambda: None
 
     client = SwitcherApiClient(token_provider=token_provider, oauth_client=oauth_client)
-    httpx_mock.add_response(method='GET', url='http://localhost:3000/domain', status_code=401)
-    httpx_mock.add_response(method='GET', url='http://localhost:3000/domain', status_code=401)
+    httpx_mock.add_response(method='GET', url='http://127.0.0.1:3000/domain', status_code=401)
+    httpx_mock.add_response(method='GET', url='http://127.0.0.1:3000/domain', status_code=401)
 
     try:
         with pytest.raises(SwitcherApiError, match='HTTP 401'):
@@ -238,9 +238,9 @@ def test_api_client_defaults_to_owned_oauth_client_and_closes_it(httpx_mock, mon
 def test_api_client_does_not_close_injected_http_client(httpx_mock) -> None:
     """Injected HTTP clients stay open after aclose()."""
 
-    http_client = httpx.AsyncClient(base_url='http://localhost:3000')
+    http_client = httpx.AsyncClient(base_url='http://127.0.0.1:3000')
     client = SwitcherApiClient(token_provider=_static_token_provider, http_client=http_client)
-    httpx_mock.add_response(method='GET', url='http://localhost:3000/config/key/flag?domain=Main', json={})
+    httpx_mock.add_response(method='GET', url='http://127.0.0.1:3000/config/key/flag?domain=Main', json={})
 
     try:
         asyncio.run(client.get_config_by_key('flag', 'Main'))
@@ -254,7 +254,7 @@ def test_api_client_raises_when_response_is_not_json(httpx_mock) -> None:
     """Successful responses with a non-JSON body should raise a descriptive API error."""
 
     client = SwitcherApiClient(token_provider=_static_token_provider)
-    httpx_mock.add_response(method='GET', url='http://localhost:3000/domain', content=b'<html>')
+    httpx_mock.add_response(method='GET', url='http://127.0.0.1:3000/domain', content=b'<html>')
 
     try:
         with pytest.raises(SwitcherApiError, match='not valid JSON') as error_info:

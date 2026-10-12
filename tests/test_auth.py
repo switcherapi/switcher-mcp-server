@@ -69,7 +69,7 @@ def test_api_client_forwards_request_token_without_local_oauth(httpx_mock) -> No
     client = SwitcherApiClient(request_token_getter=lambda: 'caller-token')
     httpx_mock.add_response(
         method='GET',
-        url='http://localhost:3000/domain',
+        url='http://127.0.0.1:3000/domain',
         json=[],
         match_headers={'Authorization': 'Bearer caller-token'},
     )
@@ -97,7 +97,7 @@ def test_api_client_reports_rejected_request_token(httpx_mock) -> None:
     """A 401 from switcher-api surfaces a re-authorize hint and is not retried."""
 
     client = SwitcherApiClient(request_token_getter=lambda: 'stale')
-    httpx_mock.add_response(method='GET', url='http://localhost:3000/domain', status_code=401, text='denied')
+    httpx_mock.add_response(method='GET', url='http://127.0.0.1:3000/domain', status_code=401, text='denied')
 
     try:
         with pytest.raises(SwitcherApiError, match='re-authorize') as error:

@@ -12,6 +12,7 @@ from typing import Sequence
 
 from switcher_mcp_server.tools import get_mcp_server
 from switcher_mcp_server.auth import configure_http_auth
+from switcher_mcp_server.oauth_client import DEFAULT_SWITCHER_API_URL
 
 DEFAULT_TRANSPORT = 'stdio'
 DEFAULT_HOST = '127.0.0.1'
@@ -30,6 +31,13 @@ def _build_arg_parser() -> argparse.ArgumentParser:
         choices=['stdio', 'streamable-http'],
         default=os.getenv('SWITCHER_MCP_TRANSPORT', DEFAULT_TRANSPORT),
         help='Transport protocol to serve the MCP server on (default: stdio).',
+    )
+    parser.add_argument(
+        '--api-url',
+        default=os.getenv('SWITCHER_API_URL', DEFAULT_SWITCHER_API_URL),
+        help='Base URL of the target switcher-api instance, used for tool calls and as the OAuth '
+        f'issuer (default: {DEFAULT_SWITCHER_API_URL}). Overrides the SWITCHER_API_URL environment '
+        'variable; useful on Windows where setting env vars for a single run can be inconvenient.',
     )
     parser.add_argument(
         '--host',
@@ -55,6 +63,10 @@ def main(argv: Sequence[str] | None = None) -> None:
     """Run the Switcher MCP server using the requested transport."""
 
     args = _build_arg_parser().parse_args(argv)
+    # api_client/oauth_client read SWITCHER_API_URL lazily via os.getenv, so set it here to let
+    # --api-url override the environment before any tool call or auth setup consults it.
+    os.environ['SWITCHER_API_URL'] = args.api_url
+
     server = get_mcp_server()
 
     if args.transport == 'stdio':
