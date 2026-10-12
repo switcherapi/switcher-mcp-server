@@ -4,16 +4,18 @@ ENV APP_HOME=/home/app
 RUN addgroup -S app \
     && adduser -S app -G app
 
-COPY Pipfile Pipfile.lock $APP_HOME
-
 WORKDIR $APP_HOME
+
+COPY Pipfile Pipfile.lock ./
 
 RUN pip install --upgrade pip && \
     pip install pipenv && \
     pipenv install --deploy --system --ignore-pipfile && \
     pip uninstall -y pipenv
 
-COPY /switcher_mcp_server .
+COPY switcher_mcp_server ./switcher_mcp_server
 
 RUN chown -R app:app "$APP_HOME"
 USER app
+
+CMD ["python", "-m", "switcher_mcp_server.server"]

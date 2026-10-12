@@ -90,8 +90,8 @@ You can revoke access at any time from switcher-management's **Settings → Auth
 
 # Running the Server
 
-Configure the target switcher-api instance via the `SWITCHER_API_URL` environment variable
-(defaults to `http://localhost:3000`).
+Configure the target switcher-api instance via the `SWITCHER_API_URL` environment variable or the
+`--api-url` CLI flag (defaults to `http://127.0.0.1:3000`).
 
 ### Stdio Transport
 
@@ -99,6 +99,13 @@ The default transport, used when the server is launched as a local subprocess by
 
 ```bash
 SWITCHER_API_URL=https://api.switcherapi.com pipenv run python -m switcher_mcp_server.server
+```
+
+Or, equivalently, using the CLI flag (handy on Windows, where setting environment variables for a
+single run can be inconvenient):
+
+```bash
+pipenv run python -m switcher_mcp_server.server --api-url https://api.switcherapi.com
 ```
 
 ### Streamable HTTP Transport
@@ -115,7 +122,7 @@ The server will be reachable at `http://<host>:<port>/mcp`.
 
 | Variable                 | CLI flag         | Default             | Description                                   |
 |---------------------------|-------------------|----------------------|------------------------------------------------|
-| `SWITCHER_API_URL`        | —                 | `http://localhost:3000` | Base URL of the target switcher-api instance |
+| `SWITCHER_API_URL`        | `--api-url`       | `http://127.0.0.1:3000` | Base URL of the target switcher-api instance |
 | `SWITCHER_MCP_TRANSPORT`  | `--transport`     | `stdio`              | `stdio` or `streamable-http`                   |
 | `SWITCHER_MCP_HOST`       | `--host`          | `127.0.0.1`          | Bind host for the streamable HTTP transport    |
 | `SWITCHER_MCP_PORT`       | `--port`          | `8000`               | Bind port for the streamable HTTP transport    |

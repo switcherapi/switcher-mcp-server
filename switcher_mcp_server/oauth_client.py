@@ -21,7 +21,7 @@ from urllib.parse import parse_qs, urlencode, urlparse
 
 import httpx
 
-DEFAULT_SWITCHER_API_URL = 'http://localhost:3000'
+DEFAULT_SWITCHER_API_URL = 'http://127.0.0.1:3000'
 DEFAULT_SCOPE = 'config:read'
 DEFAULT_CLIENT_NAME = 'Switcher MCP Server'
 DEFAULT_AUTHORIZATION_TIMEOUT_SECONDS = 300

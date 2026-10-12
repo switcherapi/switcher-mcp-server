@@ -28,6 +28,11 @@ LOOPBACK_HOSTS = {'127.0.0.1', 'localhost', '::1'}
 class PassthroughTokenVerifier:  # pylint: disable=too-few-public-methods
     """Accepts any non-empty bearer token; switcher-api is the authority that validates it and its scopes."""
 
+    def __init__(self, resource: str | None = None) -> None:
+        # Recorded so verify_token can stamp AccessToken.resource, satisfying AuthSettings'
+        # validate_token_resource check even though this server never inspects the token itself.
+        self._resource = resource
+
     async def verify_token(self, token: str) -> AccessToken | None:
         """Wrap the raw token so tools can forward it to switcher-api."""
 
@@ -36,9 +41,11 @@ class PassthroughTokenVerifier:  # pylint: disable=too-few-public-methods
 
         await asyncio.sleep(0)
 
-        # The SDK enforces required_scopes locally, so the scope the server advertises is assumed here;
-        # switcher-api enforces the scopes actually granted to the token.
-        return AccessToken(token=token, client_id='switcher-mcp-client', scopes=[DEFAULT_SCOPE])
+        # The SDK enforces required_scopes and (optionally) the resource indicator locally, so both
+        # are assumed here; switcher-api enforces the scopes actually granted to the token.
+        return AccessToken(
+            token=token, client_id='switcher-mcp-client', scopes=[DEFAULT_SCOPE], resource=self._resource
+        )
 
 
 def resolve_public_url(host: str, port: int, public_url: str | None = None) -> str:
@@ -60,6 +67,7 @@ def build_auth_settings(public_url: str, api_url: str | None = None) -> AuthSett
         issuer_url=issuer,  # type: ignore[arg-type]
         resource_server_url=public_url,  # type: ignore[arg-type]
         required_scopes=[DEFAULT_SCOPE],
+        validate_token_resource=True,
     )
 
 
@@ -78,6 +86,6 @@ def configure_http_auth(server: MCPServer, host: str, port: int, public_url: str
     server.settings.auth = build_auth_settings(resource_url)
     # MCPServer only accepts auth at construction time, but the shared instance is created at import
     # time before the transport is known, so it is enabled here for the HTTP transport only.
-    server._token_verifier = PassthroughTokenVerifier()  # pylint: disable=protected-access
+    server._token_verifier = PassthroughTokenVerifier(resource_url)  # pylint: disable=protected-access
     shared.enable_request_token_auth()
     return resource_url

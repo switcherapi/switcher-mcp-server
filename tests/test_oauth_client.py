@@ -195,7 +195,7 @@ def test_build_authorization_url_contains_required_oauth_parameters(httpx_mock) 
         query = parse_qs(parsed_url.query)
 
         assert parsed_url.scheme == 'http'
-        assert parsed_url.netloc == 'localhost:3000'
+        assert parsed_url.netloc == '127.0.0.1:3000'
         assert parsed_url.path == '/oauth/authorize'
         assert query['response_type'] == ['code']
         assert query['client_id'] == ['registered-client']
