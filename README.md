@@ -47,8 +47,7 @@ How authentication works depends on the transport.
 ### Streamable HTTP transport
 
 The MCP client (VS Code, Claude, etc.) performs the OAuth flow itself, **on the user's machine**,
-when it registers/connects to the MCP server. The server never opens a browser or stores
-credentials:
+when it registers/connects to the MCP server.
 
 1. The client calls `/mcp` without a token and receives a `401` challenge whose
    `resource_metadata` points to the server's protected-resource metadata.
@@ -95,14 +94,7 @@ Configure the target switcher-api instance via the `SWITCHER_API_URL` environmen
 
 ### Stdio Transport
 
-The default transport, used when the server is launched as a local subprocess by an MCP client:
-
-```bash
-SWITCHER_API_URL=https://api.switcherapi.com pipenv run python -m switcher_mcp_server.server
-```
-
-Or, equivalently, using the CLI flag (handy on Windows, where setting environment variables for a
-single run can be inconvenient):
+For the default stdio transport:
 
 ```bash
 pipenv run python -m switcher_mcp_server.server --api-url https://api.switcherapi.com
@@ -186,20 +178,9 @@ make e2e-prompts  # manual, configurable e2e prompt validation (see scripts/e2e/
 Both `pylint` and `pytest` must pass before merging changes. Tests use `pytest-httpx` to mock all
 outbound HTTP calls to switcher-api — no live server is required to run the test suite.
 
-## Project Layout
-
-```
-switcher_mcp_server/
-    oauth_client.py       # OAuth 2.1 + PKCE client (registration, authorize, token, refresh)
-    api_client.py         # Authenticated async HTTP client for switcher-api
-    server.py             # Entrypoint wiring tools to the stdio/streamable-http transports
-    tools/                # MCP server tools (list_domains, list_environments, get_feature_flag)
-tests/                    # pytest suite (unit + transport integration tests)
-```
-
 ## Contributing
 
-Read our [Contributing](https://github.com/switcherapi/switcher-api/blob/master/CONTRIBUTING.md)
+Read our [Contributing](https://github.com/switcherapi/switcher-mcp-server/blob/master/CONTRIBUTING.md)
 guide to learn about our development process, and how to propose enhancements and improvements.
 
 # AI Disclaimer
