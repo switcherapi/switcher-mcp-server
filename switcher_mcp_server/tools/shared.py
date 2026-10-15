@@ -5,6 +5,8 @@ from __future__ import annotations
 from mcp.server import MCPServer
 from mcp.server.auth.middleware.auth_context import get_access_token
 
+from starlette.responses import JSONResponse
+
 from switcher_mcp_server import __version__
 from switcher_mcp_server.api_client import SwitcherApiClient
 from switcher_mcp_server.oauth_client import SwitcherOAuthClient
@@ -18,6 +20,12 @@ mcp = MCPServer(
 
 _API_CLIENT: SwitcherApiClient | None = None
 _REQUEST_TOKEN_AUTH = False
+
+
+@mcp.custom_route(path='/healthz', methods=['GET'])
+async def healthz(_request) -> JSONResponse:
+    """Health check endpoint."""
+    return JSONResponse({'status': 'ok'})
 
 
 def enable_request_token_auth() -> None:

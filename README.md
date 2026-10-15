@@ -97,10 +97,10 @@ Configure the target switcher-api instance via the `SWITCHER_API_URL` environmen
 For the default stdio transport:
 
 ```bash
-pipenv run python -m switcher_mcp_server.server --api-url https://api.switcherapi.com
+pipenv run python -m switcher_mcp_server.server --api-url https://switcherapi.com/api
 ```
 
-### Streamable HTTP Transport
+### Streamable HTTP Transport (embedded uvicorn - single worker)
 
 For a hosted/remote MCP server:
 
@@ -110,15 +110,40 @@ pipenv run python -m switcher_mcp_server.server --transport streamable-http --ho
 
 The server will be reachable at `http://<host>:<port>/mcp`.
 
+### Streamable HTTP Transport (external uvicorn - multiple workers)
+
+For containerized/production deployments that need custom TLS certificates
+or multiple workers, run `switcher_mcp_server.asgi:create_app` with your own uvicorn process
+instead (the `--factory` flag is required, since the app is built from a factory function):
+
+```bash
+pipenv run uvicorn switcher_mcp_server.asgi:create_app \
+  --factory \
+  --host 0.0.0.0 \
+  --port 8443 \
+  --ssl-certfile=/etc/certs/ca.crt \
+  --ssl-keyfile=/etc/certs/ca.key \
+  --workers 4
+```
+
+If the target switcher-api instance is also served under that certificate, set
+`SWITCHER_API_CERT_PATH` to the same cert file so outbound requests verify against it instead of
+the default CA bundle:
+
+```bash
+export SWITCHER_API_CERT_PATH=/etc/certs/ca.crt
+```
+
 ## Configuration
 
-| Variable                 | CLI flag         | Default             | Description                                   |
-|---------------------------|-------------------|----------------------|------------------------------------------------|
-| `SWITCHER_API_URL`        | `--api-url`       | `http://127.0.0.1:3000` | Base URL of the target switcher-api instance |
-| `SWITCHER_MCP_TRANSPORT`  | `--transport`     | `stdio`              | `stdio` or `streamable-http`                   |
-| `SWITCHER_MCP_HOST`       | `--host`          | `127.0.0.1`          | Bind host for the streamable HTTP transport    |
-| `SWITCHER_MCP_PORT`       | `--port`          | `8000`               | Bind port for the streamable HTTP transport    |
-| `SWITCHER_MCP_PUBLIC_URL` | `--public-url`    | `http://<host>:<port>` | Externally reachable MCP URL used as the OAuth resource identifier (streamable HTTP only) |
+| Variable                  | CLI flag          | Default                 | Description                                    |
+|---------------------------|-------------------|-------------------------|------------------------------------------------|
+| `SWITCHER_API_URL`        | `--api-url`       | `http://127.0.0.1:3000` | Base URL of the target switcher-api instance   |
+| `SWITCHER_API_CERT_PATH`  | —                 | unset                   | Path to the TLS certificate for Switcher API   |
+| `SWITCHER_MCP_TRANSPORT`  | `--transport`     | `stdio`                 | `stdio` or `streamable-http`                   |
+| `SWITCHER_MCP_HOST`       | `--host`          | `0.0.0.0`               | Bind host for the streamable HTTP transport    |
+| `SWITCHER_MCP_PORT`       | `--port`          | `8000`                  | Bind port for the streamable HTTP transport    |
+| `SWITCHER_MCP_PUBLIC_URL` | `--public-url`    | `http://<host>:<port>`  | Externally reachable MCP URL used as the OAuth resource identifier (streamable HTTP only) |
 | `SWITCHER_MCP_CREDENTIALS_PATH` | —           | `~/.switcher-mcp/credentials.json` | Override the persisted OAuth credentials cache location |
 
 CLI flags take precedence over environment variables.
@@ -135,7 +160,7 @@ Example stdio configuration for an MCP client (e.g. Claude Desktop, VS Code):
       "args": ["run", "python", "-m", "switcher_mcp_server.server"],
       "cwd": "/path/to/switcher-mcp-server",
       "env": {
-        "SWITCHER_API_URL": "https://api.switcherapi.com"
+        "SWITCHER_API_URL": "https://switcherapi.com/api"
       }
     }
   }
