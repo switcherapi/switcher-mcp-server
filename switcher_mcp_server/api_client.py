@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import ssl
 import asyncio
 from typing import Any, Awaitable, Callable
 
@@ -14,6 +15,27 @@ from switcher_mcp_server.oauth_client import (
     SwitcherAuthorizationRequiredError,
     SwitcherOAuthClient,
 )
+
+CERT_PATH_ENV = 'SWITCHER_API_CERT_PATH'
+
+
+def _build_verify(cert_path: str | None = None) -> bool | ssl.SSLContext:
+    """Build the httpx ``verify`` value for the outbound Switcher API connection.
+
+    When no custom certificate is configured, fall back to the default certificate
+    verification. When one is provided (matching the certificate used to terminate TLS
+    on this server's own uvicorn instance), build an ``SSLContext`` that trusts it so the
+    Switcher API connection is verified under the same certification.
+    """
+
+    cert_path = cert_path or os.getenv(CERT_PATH_ENV)
+    if not cert_path:
+        return True
+
+    context = ssl.create_default_context()
+    context.minimum_version = ssl.TLSVersion.TLSv1_2
+    context.load_cert_chain(certfile=cert_path)
+    return context
 
 
 class SwitcherApiError(RuntimeError):
@@ -37,6 +59,7 @@ class SwitcherApiClient:
         timeout: float = 10.0,
         http_client: httpx.AsyncClient | None = None,
         request_token_getter: Callable[[], str | None] | None = None,
+        cert_path: str | None = None,
     ) -> None:
         self._request_token_getter = request_token_getter
         owns_oauth_client = token_provider is None and oauth_client is None and request_token_getter is None
@@ -53,7 +76,9 @@ class SwitcherApiClient:
         self._token_provider = token_provider
         self._base_url = (base_url or os.getenv('SWITCHER_API_URL', DEFAULT_SWITCHER_API_URL)).rstrip('/')
         self._owns_http_client = http_client is None
-        self._http_client = http_client or httpx.AsyncClient(base_url=self._base_url, timeout=timeout)
+        self._http_client = http_client or httpx.AsyncClient(
+            base_url=self._base_url, timeout=timeout, verify=_build_verify(cert_path)
+        )
 
     async def aclose(self) -> None:
         """Close the owned HTTP resources."""

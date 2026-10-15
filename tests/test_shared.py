@@ -4,11 +4,27 @@ from __future__ import annotations
 
 import asyncio
 
+import httpx
 from mcp.server.auth.middleware.auth_context import auth_context_var
 from mcp.server.auth.middleware.bearer_auth import AuthenticatedUser
 from mcp.server.auth.provider import AccessToken
 
 from switcher_mcp_server.tools import shared
+
+
+def test_healthz_returns_ok_response() -> None:
+    """The registered health check route returns a successful JSON response."""
+
+    async def _get_healthz() -> httpx.Response:
+        app = shared.get_mcp_server().streamable_http_app()
+        transport = httpx.ASGITransport(app=app)
+        async with httpx.AsyncClient(transport=transport, base_url='http://testserver') as client:
+            return await client.get('/healthz')
+
+    response = asyncio.run(_get_healthz())
+
+    assert response.status_code == 200
+    assert response.json() == {'status': 'ok'}
 
 
 def test_get_request_token_returns_none_without_authenticated_user() -> None:

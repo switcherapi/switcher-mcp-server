@@ -1,4 +1,4 @@
-.PHONY: install lint test cover e2e-tools e2e-prompts
+.PHONY: install lint test cover e2e-tools e2e-prompts run uvicorn
 
 install:
 	pipenv install --dev
@@ -20,3 +20,6 @@ e2e-prompts:
 
 run:
 	pipenv run python -m switcher_mcp_server.server --transport streamable-http --host 0.0.0.0 --port 8000
+
+uvicorn:
+	pipenv run uvicorn switcher_mcp_server.asgi:create_app --factory --host 0.0.0.0 --port 8000

@@ -1,14 +1,40 @@
+# TLS Enabled
+# volumes:
+#   switcherapi-tls:
+#     driver: local
+#     driver_opts:
+#       o: bind
+#       type: none
+#       device: "/data/certs"
+
 services:
   switcher-mcp-server:
-    image: trackerforce/switcher-mcp-server:dev
+    image: trackerforce/switcher-mcp-server:latest
     container_name: switcher-mcp-server
-    command: python -m switcher_mcp_server.server
+    command: [
+      "uvicorn", "switcher_mcp_server.asgi:create_app",
+      "--factory",
+      "--host", "0.0.0.0",
+      "--port", "8000",
+      "--workers", "1"
+    ]
+    # TLS Enabled
+    # command: [
+    #   "uvicorn", "switcher_mcp_server.asgi:create_app",
+    #   "--factory",
+    #   "--host", "0.0.0.0",
+    #   "--port", "8443",
+    #   "--ssl-certfile=/etc/certs/[replace].crt", "--ssl-keyfile=/etc/certs/[replace].key",
+    #   "--workers", "1"
+    # ]
     ports:
       - 8000:8000
+      # - 8443:8443
     environment:
-      - SWITCHER_MCP_TRANSPORT=streamable-http
       - SWITCHER_MCP_HOST=0.0.0.0
       - SWITCHER_MCP_PORT=8000
-      - SWITCHER_API_URL=http://127.0.0.1:3000
-      - SWITCHER_MCP_PUBLIC_URL=http://127.0.0.1:8000
-      # - SWITCHER_MCP_CREDENTIALS_PATH=/etc/certs/[replace].json
+      - SWITCHER_MCP_PUBLIC_URL=https://mcp.switcherapi.com
+      - SWITCHER_API_URL=https://switcherapi.com/api
+      # - SWITCHER_API_CERT_PATH=/etc/certs/[replace].crt
+    # volumes:
+    #   - switcherapi-tls:/etc/certs

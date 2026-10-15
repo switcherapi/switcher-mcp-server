@@ -4,13 +4,14 @@ from __future__ import annotations
 
 import asyncio
 import json
+import ssl
 from datetime import UTC, datetime, timedelta
 from unittest.mock import AsyncMock
 
 import httpx
 import pytest
 
-from switcher_mcp_server.api_client import SwitcherApiClient, SwitcherApiError
+from switcher_mcp_server.api_client import CERT_PATH_ENV, SwitcherApiClient, SwitcherApiError, _build_verify
 from switcher_mcp_server.oauth_client import SwitcherAuthorizationError, SwitcherAuthorizationRequiredError
 
 
@@ -260,5 +261,75 @@ def test_api_client_raises_when_response_is_not_json(httpx_mock) -> None:
         with pytest.raises(SwitcherApiError, match='not valid JSON') as error_info:
             asyncio.run(client.list_domains())
         assert error_info.value.status_code == 200
+    finally:
+        asyncio.run(client.aclose())
+
+
+def test_build_verify_defaults_to_true_without_a_cert(monkeypatch) -> None:
+    """With no cert configured (argument or env var), verification uses the default CA bundle."""
+
+    monkeypatch.delenv(CERT_PATH_ENV, raising=False)
+    assert _build_verify() is True
+
+
+def test_build_verify_returns_ssl_context_for_explicit_cert_path(monkeypatch) -> None:
+    """An explicit cert path builds an SSLContext pinned to that certificate."""
+
+    monkeypatch.delenv(CERT_PATH_ENV, raising=False)
+    seen_certfiles = []
+
+    def fake_load_cert_chain(self, certfile=None, keyfile=None, password=None):  # noqa: ANN001
+        seen_certfiles.append(certfile)
+
+    monkeypatch.setattr(ssl.SSLContext, 'load_cert_chain', fake_load_cert_chain)
+
+    context = _build_verify('/etc/certs/ca.crt')
+
+    assert isinstance(context, ssl.SSLContext)
+    assert context.minimum_version == ssl.TLSVersion.TLSv1_2
+    assert seen_certfiles == ['/etc/certs/ca.crt']
+
+
+def test_build_verify_falls_back_to_env_var_cert_path(monkeypatch) -> None:
+    """When no explicit cert path is passed, the env var is used instead."""
+
+    monkeypatch.setenv(CERT_PATH_ENV, '/etc/certs/env.crt')
+    seen_certfiles = []
+    monkeypatch.setattr(
+        ssl.SSLContext,
+        'load_cert_chain',
+        lambda self, certfile=None, keyfile=None, password=None: seen_certfiles.append(certfile),
+    )
+
+    context = _build_verify()
+
+    assert isinstance(context, ssl.SSLContext)
+    assert seen_certfiles == ['/etc/certs/env.crt']
+
+
+def test_api_client_uses_cert_path_to_build_owned_http_client(monkeypatch) -> None:
+    """The client builds its own http client with verify derived from the given cert path."""
+
+    captured = {}
+
+    class _FakeAsyncClient:
+        def __init__(self, *, base_url, timeout, verify):  # noqa: ANN001
+            captured['verify'] = verify
+            self.base_url = base_url
+            self.timeout = timeout
+
+        async def aclose(self):
+            return None
+
+    monkeypatch.setattr(httpx, 'AsyncClient', _FakeAsyncClient)
+    monkeypatch.setattr(
+        ssl.SSLContext,
+        'load_cert_chain',
+        lambda self, certfile=None, keyfile=None, password=None: None,
+    )
+
+    client = SwitcherApiClient(token_provider=_static_token_provider, cert_path='/etc/certs/ca.crt')
+    try:
+        assert isinstance(captured['verify'], ssl.SSLContext)
     finally:
         asyncio.run(client.aclose())
