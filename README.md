@@ -34,7 +34,7 @@ Toggling feature flags will not be supported by this MCP Server for security and
 
 ### Requirements
 
-- Python 3.14+
+- Python 3.15+
 - [pipenv](https://pipenv.pypa.io/) for dependency management
 - A running [switcher-api](https://github.com/switcherapi/switcher-api) instance with OAuth enabled
 - A [switcher-management](https://github.com/switcherapi/switcher-management) instance for the
