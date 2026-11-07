@@ -40,6 +40,13 @@ def _build_arg_parser() -> argparse.ArgumentParser:
         'variable; useful on Windows where setting env vars for a single run can be inconvenient.',
     )
     parser.add_argument(
+        '--api-internal-url',
+        default=os.getenv('SWITCHER_API_INTERNAL_URL'),
+        help='Optional internal base URL of switcher-api used only for server-side tool requests '
+        '(e.g. a cluster-internal service). OAuth discovery and flows keep using --api-url. '
+        'Overrides the SWITCHER_API_INTERNAL_URL environment variable; falls back to --api-url when unset.',
+    )
+    parser.add_argument(
         '--host',
         default=os.getenv('SWITCHER_MCP_HOST', DEFAULT_HOST),
         help='Host to bind the streamable HTTP transport to (default: 127.0.0.1).',
@@ -66,6 +73,8 @@ def main(argv: Sequence[str] | None = None) -> None:
     # api_client/oauth_client read SWITCHER_API_URL lazily via os.getenv, so set it here to let
     # --api-url override the environment before any tool call or auth setup consults it.
     os.environ['SWITCHER_API_URL'] = args.api_url
+    if args.api_internal_url:
+        os.environ['SWITCHER_API_INTERNAL_URL'] = args.api_internal_url
 
     server = get_mcp_server()
 

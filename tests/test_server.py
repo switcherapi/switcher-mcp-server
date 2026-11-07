@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 from unittest.mock import MagicMock
 
 from switcher_mcp_server import server
@@ -46,3 +47,27 @@ def test_main_reads_transport_from_environment_variable(monkeypatch) -> None:
     server.main([])
 
     fake_server.run.assert_called_once_with(transport='streamable-http', host='127.0.0.5', port=9100)
+
+
+def test_main_api_internal_url_cli_overrides_environment(monkeypatch) -> None:
+    """--api-internal-url wins over the env var and --api-url stays the public URL."""
+
+    monkeypatch.setattr(server, 'get_mcp_server', lambda: MagicMock())
+    monkeypatch.setenv('SWITCHER_API_URL', 'https://public.example/api')
+    monkeypatch.setenv('SWITCHER_API_INTERNAL_URL', 'http://from-env:3000')
+
+    server.main(['--api-internal-url', 'http://from-cli:3000'])
+
+    assert os.environ['SWITCHER_API_INTERNAL_URL'] == 'http://from-cli:3000'
+    assert os.environ['SWITCHER_API_URL'] == 'https://public.example/api'
+
+
+def test_main_does_not_set_internal_url_when_unconfigured(monkeypatch) -> None:
+    """No internal URL is introduced when neither flag nor env var is provided."""
+
+    monkeypatch.setattr(server, 'get_mcp_server', lambda: MagicMock())
+    monkeypatch.delenv('SWITCHER_API_INTERNAL_URL', raising=False)
+
+    server.main([])
+
+    assert 'SWITCHER_API_INTERNAL_URL' not in os.environ

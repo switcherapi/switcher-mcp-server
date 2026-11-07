@@ -17,6 +17,7 @@ from switcher_mcp_server.oauth_client import (
 )
 
 CERT_PATH_ENV = 'SWITCHER_API_CERT_PATH'
+INTERNAL_URL_ENV = 'SWITCHER_API_INTERNAL_URL'
 
 
 def _build_verify(cert_path: str | None = None) -> bool | ssl.SSLContext:
@@ -74,7 +75,12 @@ class SwitcherApiClient:
             token_provider = oauth_client.get_valid_access_token
 
         self._token_provider = token_provider
-        self._base_url = (base_url or os.getenv('SWITCHER_API_URL', DEFAULT_SWITCHER_API_URL)).rstrip('/')
+        resolved_url = (
+            base_url
+            or os.getenv(INTERNAL_URL_ENV)
+            or os.getenv('SWITCHER_API_URL', DEFAULT_SWITCHER_API_URL)
+        )
+        self._base_url = resolved_url.rstrip('/')
         self._owns_http_client = http_client is None
         self._http_client = http_client or httpx.AsyncClient(
             base_url=self._base_url, timeout=timeout, verify=_build_verify(cert_path)
