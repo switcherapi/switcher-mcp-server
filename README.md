@@ -136,17 +136,33 @@ export SWITCHER_API_CERT_PATH=/etc/certs/ca.crt
 
 ## Configuration
 
-| Variable                  | CLI flag          | Default                 | Description                                    |
-|---------------------------|-------------------|-------------------------|------------------------------------------------|
-| `SWITCHER_API_URL`        | `--api-url`       | `http://127.0.0.1:3000` | Base URL of the target switcher-api instance   |
-| `SWITCHER_API_CERT_PATH`  | —                 | unset                   | Path to the TLS certificate for Switcher API   |
-| `SWITCHER_MCP_TRANSPORT`  | `--transport`     | `stdio`                 | `stdio` or `streamable-http`                   |
-| `SWITCHER_MCP_HOST`       | `--host`          | `0.0.0.0`               | Bind host for the streamable HTTP transport    |
-| `SWITCHER_MCP_PORT`       | `--port`          | `8000`                  | Bind port for the streamable HTTP transport    |
-| `SWITCHER_MCP_PUBLIC_URL` | `--public-url`    | `http://<host>:<port>`  | Externally reachable MCP URL used as the OAuth resource identifier (streamable HTTP only) |
+| Variable                   | CLI flag            | Default                        | Description                                    |
+|----------------------------|---------------------|--------------------------------|------------------------------------------------|
+| `SWITCHER_API_URL`         | `--api-url`         | `http://127.0.0.1:3000`        | Base URL of the target switcher-api instance   |
+| `SWITCHER_API_INTERNAL_URL`| `--api-internal-url`| unset (uses `SWITCHER_API_URL`)| Internal switcher-api URL used only for server-side tool requests |
+| `SWITCHER_API_CERT_PATH`   | —                   | unset                          | Path to the TLS certificate for Switcher API   |
+| `SWITCHER_MCP_TRANSPORT`   | `--transport`       | `stdio`                        | `stdio` or `streamable-http`                   |
+| `SWITCHER_MCP_HOST`        | `--host`            | `0.0.0.0`                      | Bind host for the streamable HTTP transport    |
+| `SWITCHER_MCP_PORT`        | `--port`            | `8000`                         | Bind port for the streamable HTTP transport    |
+| `SWITCHER_MCP_PUBLIC_URL`  | `--public-url`      | `http://<host>:<port>`         | Externally reachable MCP URL used as the OAuth resource identifier (streamable HTTP only) |
 | `SWITCHER_MCP_CREDENTIALS_PATH` | —           | `~/.switcher-mcp/credentials.json` | Override the persisted OAuth credentials cache location |
 
 CLI flags take precedence over environment variables.
+
+### Internal API URL (hosted deployments)
+
+`SWITCHER_API_URL` is the **public** URL: it is used for OAuth issuer discovery, authorization,
+token and refresh requests. Optionally, `SWITCHER_API_INTERNAL_URL` points MCP server-to-API tool
+requests at an internal endpoint (e.g. a Kubernetes service), bypassing the public ingress. The
+internal URL is never advertised to OAuth clients. When unset, tool requests use `SWITCHER_API_URL`.
+
+```yaml
+env:
+  - name: SWITCHER_API_URL
+    value: https://switcherapi.com/api
+  - name: SWITCHER_API_INTERNAL_URL
+    value: http://switcher-api.switcherapi.svc.cluster.local:3000
+```
 
 ## MCP Client Configuration
 

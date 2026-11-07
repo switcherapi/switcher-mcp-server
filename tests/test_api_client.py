@@ -333,3 +333,41 @@ def test_api_client_uses_cert_path_to_build_owned_http_client(monkeypatch) -> No
         assert isinstance(captured['verify'], ssl.SSLContext)
     finally:
         asyncio.run(client.aclose())
+
+
+def test_api_client_prefers_internal_url_and_oauth_keeps_public_url(monkeypatch) -> None:
+    """Tool requests use the internal URL while an owned OAuth client keeps the public URL."""
+
+    monkeypatch.setenv('SWITCHER_API_URL', 'https://public.example/api')
+    monkeypatch.setenv('SWITCHER_API_INTERNAL_URL', 'http://internal:3000/')
+
+    client = SwitcherApiClient()
+
+    assert client._base_url == 'http://internal:3000'
+    assert str(client._http_client.base_url).rstrip('/') == 'http://internal:3000'
+    assert client._oauth_client is not None
+    assert client._oauth_client.base_url == 'https://public.example/api'
+    asyncio.run(client.aclose())
+
+
+def test_api_client_falls_back_to_public_url_without_internal_url(monkeypatch) -> None:
+    """Without an internal URL, behavior is unchanged."""
+
+    monkeypatch.setenv('SWITCHER_API_URL', 'https://public.example/api')
+    monkeypatch.delenv('SWITCHER_API_INTERNAL_URL', raising=False)
+
+    client = SwitcherApiClient(token_provider=_static_token_provider)
+
+    assert client._base_url == 'https://public.example/api'
+    asyncio.run(client.aclose())
+
+
+def test_api_client_base_url_argument_overrides_internal_url(monkeypatch) -> None:
+    """The constructor argument keeps the highest precedence."""
+
+    monkeypatch.setenv('SWITCHER_API_INTERNAL_URL', 'http://internal:3000')
+
+    client = SwitcherApiClient(token_provider=_static_token_provider, base_url='http://explicit:1')
+
+    assert client._base_url == 'http://explicit:1'
+    asyncio.run(client.aclose())
