@@ -64,14 +64,8 @@ def _get_api_client() -> SwitcherApiClient:
 
     oauth_client = SwitcherOAuthClient()
     if _REQUEST_TOKEN_AUTH:
-        _API_CLIENT = SwitcherApiClient(
-            base_url=oauth_client.base_url,
-            request_token_getter=_get_request_token,
-        )
+        _API_CLIENT = SwitcherApiClient(request_token_getter=_get_request_token)
         return _API_CLIENT
 
-    _API_CLIENT = SwitcherApiClient(
-        oauth_client=oauth_client,
-        base_url=oauth_client.base_url,
-    )
+    _API_CLIENT = SwitcherApiClient(oauth_client=oauth_client)
     return _API_CLIENT
