@@ -61,6 +61,21 @@ def test_request_token_mode_builds_client_that_forwards_caller_token(monkeypatch
         asyncio.run(client.aclose())
 
 
+def test_shared_client_prefers_internal_url_for_tool_requests(monkeypatch) -> None:
+    """Tool requests use the internal URL when set while OAuth keeps the public one."""
+
+    monkeypatch.setattr(shared, '_API_CLIENT', None)
+    monkeypatch.setattr(shared, '_REQUEST_TOKEN_AUTH', True)
+    monkeypatch.setenv('SWITCHER_API_URL', 'http://public.test')
+    monkeypatch.setenv('SWITCHER_API_INTERNAL_URL', 'http://internal.test')
+
+    client = shared.get_api_client()
+    try:
+        assert client._base_url == 'http://internal.test'  # pylint: disable=protected-access
+    finally:
+        asyncio.run(client.aclose())
+
+
 def test_enable_request_token_auth_resets_cached_client(monkeypatch) -> None:
     """Enabling request-token mode must discard a client previously built for stdio."""
 
