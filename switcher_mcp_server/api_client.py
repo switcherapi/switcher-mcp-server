@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import os
 import ssl
 import asyncio
@@ -18,6 +19,7 @@ from switcher_mcp_server.oauth_client import (
 
 CERT_PATH_ENV = 'SWITCHER_API_CERT_PATH'
 INTERNAL_URL_ENV = 'SWITCHER_API_INTERNAL_URL'
+GRAPHQL_PATH = '/adm-graphql'
 
 
 def _build_verify(cert_path: str | None = None) -> bool | ssl.SSLContext:
@@ -124,6 +126,50 @@ class SwitcherApiClient:
 
         return await self._request_json('GET', f'/config/key/{key}', params=params)
 
+    async def graphql(self, query: str, variables: dict[str, Any] | None = None) -> dict[str, Any]:
+        """Execute a GraphQL query against the admin GraphQL API and return its ``data`` payload."""
+
+        payload = await self._request_json(
+            'POST', GRAPHQL_PATH, body={'query': query, 'variables': variables or {}}
+        )
+        if not isinstance(payload, dict):
+            raise SwitcherApiError('Switcher GraphQL response was not a JSON object.', response_body=str(payload))
+
+        errors = payload.get('errors')
+        if errors:
+            messages = '; '.join(
+                str(error.get('message', error)) if isinstance(error, dict) else str(error) for error in errors
+            )
+            raise SwitcherApiError(
+                f'Switcher GraphQL query failed: {messages}',
+                status_code=200,
+                response_body=json.dumps(errors),
+            )
+
+        return payload.get('data') or {}
+
+    async def resolve_domain_id(self, domain_name: str) -> str:
+        """Resolve a domain name to its id among owned and collaborative domains (exact match)."""
+
+        if not domain_name:
+            raise ValueError('domain is required.')
+
+        matches: dict[str, dict[str, Any]] = {}
+        for domain in [*await self.list_domains(), *await self.list_domain_collaborations()]:
+            if domain.get('name') == domain_name and domain.get('_id') is not None:
+                matches[str(domain['_id'])] = domain
+
+        if not matches:
+            raise SwitcherApiError(f"Domain '{domain_name}' was not found or is not accessible.", status_code=404)
+
+        if len(matches) > 1:
+            raise SwitcherApiError(
+                f"Domain name '{domain_name}' is ambiguous; it matches {len(matches)} accessible domains.",
+                status_code=409,
+            )
+
+        return next(iter(matches))
+
     async def _request_token_provider(self) -> str:
         """Return the bearer token sent by the MCP client; never opens a local browser."""
 
@@ -160,12 +206,14 @@ class SwitcherApiClient:
         path: str,
         *,
         params: dict[str, str] | None = None,
+        body: dict[str, Any] | None = None,
     ) -> Any:
         access_token = await self._get_token_with_recovery()
         response = await self._http_client.request(
             method,
             path,
             params=params,
+            json=body,
             headers={'Authorization': f'Bearer {access_token}'},
         )
 
@@ -180,6 +228,7 @@ class SwitcherApiClient:
                 method,
                 path,
                 params=params,
+                json=body,
                 headers={'Authorization': f'Bearer {access_token}'},
             )
 
