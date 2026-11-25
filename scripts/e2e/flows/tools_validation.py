@@ -82,11 +82,12 @@ async def _run() -> None:
                 'environment': config.environment,
             },
         )
-        if flag.get('key') != config.switcher_key:
-            raise ValidationError(f"Unexpected flag key in response: {flag.get('key')!r}")
-        if not isinstance(flag.get('enabled'), bool):
-            raise ValidationError(f"'enabled' field is not a boolean: {flag.get('enabled')!r}")
-        print(f"      flag '{flag['key']}' enabled={flag['enabled']}")
+        config_info = flag.get('config') or {}
+        if config_info.get('key') != config.switcher_key:
+            raise ValidationError(f"Unexpected flag key in response: {config_info.get('key')!r}")
+        if not isinstance(flag.get('hierarchy_activated'), bool):
+            raise ValidationError(f"'hierarchy_activated' field is not a boolean: {flag.get('hierarchy_activated')!r}")
+        print(f"      flag '{config_info['key']}' hierarchy_activated={flag['hierarchy_activated']}")
 
     print('\nE2E VALIDATION PASSED')
 

@@ -189,7 +189,7 @@ Example stdio configuration for an MCP client (e.g. Claude Desktop, VS Code):
 |---------------------|------------------------------------------------------------------------------|
 | `list_domains`      | List the domains the authenticated user owns and/or collaborates on.        |
 | `list_environments` | List environment names for a given domain id.                               |
-| `get_feature_flag`  | Get a feature flag's settings by key, domain name, and optional environment. |
+| `get_feature_flag`  | Get a feature flag's settings (domain, group, config, strategies, `hierarchy_activated`) by key, domain name, and optional environment (default: `default`). |
 
 # Available Prompts
 

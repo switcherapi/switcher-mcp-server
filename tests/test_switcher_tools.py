@@ -7,55 +7,98 @@ from unittest.mock import AsyncMock
 
 import pytest
 
+from switcher_mcp_server.api_client import SwitcherApiError
 from switcher_mcp_server.tools import switcher_tools
 
 
-def test_get_feature_flag_shapes_config_response(monkeypatch) -> None:
-    """Tool output should normalize the raw config payload into a stable shape."""
+def _fake_client(configuration):
+    client = AsyncMock()
+    client.resolve_domain_id.return_value = 'domain-1'
+    client.graphql.return_value = {'configuration': configuration}
+    return client
 
-    fake_api_client = AsyncMock()
-    fake_api_client.get_config_by_key.return_value = {
-        'key': 'MY_FLAG',
-        'description': 'A sample flag',
-        'enabled': True,
-        'activated': {'default': True},
-        'group': 'Group A',
-        'domain': 'domain-1',
-        'relay': None,
-        'disable_metrics': {'default': False},
-        'configStrategy': [],
+
+def _configuration(domain_active=True, group_active=True, config_active=True):
+    return {
+        'domain': {'id': 'domain-1', 'name': 'Main Domain', 'version': 1, 'activated': domain_active},
+        'group': [{'_id': 'g1', 'name': 'Group A', 'activated': group_active}],
+        'config': [
+            {'_id': 'c1', 'key': 'MY_FLAG', 'description': 'A flag', 'activated': config_active,
+             'components': ['app'], 'relay': None},
+        ],
+        'strategies': [{'_id': 's1', 'strategy': 'VALUE_VALIDATION', 'description': 'Users', 'operation': 'EXIST', 'values': ['a'], 'activated': True}],
     }
 
+
+def test_get_feature_flag_shapes_graphql_response(monkeypatch) -> None:
+    """Tool output should be the GraphQL-native shape with a computed hierarchy_activated."""
+
+    fake_api_client = _fake_client(_configuration())
     monkeypatch.setattr(switcher_tools, 'get_api_client', lambda: fake_api_client)
 
     result = asyncio.run(switcher_tools.get_feature_flag('MY_FLAG', 'Main Domain'))
 
-    assert result == {
-        'key': 'MY_FLAG',
-        'description': 'A sample flag',
-        'enabled': True,
-        'activated': {'default': True},
-        'group': 'Group A',
-        'domain': 'domain-1',
-        'relay': None,
-        'disable_metrics': {'default': False},
-        'strategies': [],
-    }
-    fake_api_client.get_config_by_key.assert_awaited_once_with('MY_FLAG', 'Main Domain', None)
+    assert result['domain']['id'] == 'domain-1'
+    assert result['group'] == {'id': 'g1', 'name': 'Group A', 'description': None, 'activated': True}
+    assert result['config']['key'] == 'MY_FLAG'
+    assert result['config']['components'] == ['app']
+    assert result['strategies'][0]['operation'] == 'EXIST'
+    assert result['strategies'][0]['strategy'] == 'VALUE_VALIDATION'
+    assert result['has_active_strategies'] is True
+    assert result['hierarchy_activated'] is True
+    fake_api_client.resolve_domain_id.assert_awaited_once_with('Main Domain')
+    query, variables = fake_api_client.graphql.await_args.args
+    strategy_block = query.split('strategies {')[1]
+    assert 'strategy' in strategy_block
+    assert '_id' in strategy_block
+    assert variables == {'domain': 'domain-1', 'key': 'MY_FLAG', 'environment': 'default'}
 
 
 def test_get_feature_flag_passes_environment_through(monkeypatch) -> None:
-    """Tool should forward the optional environment parameter to the API client."""
+    """Tool should forward the optional environment parameter to the GraphQL query."""
 
-    fake_api_client = AsyncMock()
-    fake_api_client.get_config_by_key.return_value = {'key': 'MY_FLAG', 'enabled': False}
-
+    fake_api_client = _fake_client(_configuration())
     monkeypatch.setattr(switcher_tools, 'get_api_client', lambda: fake_api_client)
 
     asyncio.run(switcher_tools.get_feature_flag('MY_FLAG', 'Main Domain', 'production'))
 
-    fake_api_client.get_config_by_key.assert_awaited_once_with('MY_FLAG', 'Main Domain', 'production')
+    assert fake_api_client.graphql.await_args.args[1]['environment'] == 'production'
 
+
+@pytest.mark.parametrize('flags', [(False, True, True), (True, False, True), (True, True, False)])
+def test_get_feature_flag_hierarchy_activated_requires_every_level(monkeypatch, flags) -> None:
+    """A deactivated domain, group, or config disables the flag."""
+
+    fake_api_client = _fake_client(_configuration(*flags))
+    monkeypatch.setattr(switcher_tools, 'get_api_client', lambda: fake_api_client)
+
+    result = asyncio.run(switcher_tools.get_feature_flag('MY_FLAG', 'Main Domain'))
+
+    assert result['hierarchy_activated'] is False
+
+
+@pytest.mark.parametrize('configuration', [{}, {'domain': {'id': 'domain-1'}, 'group': [], 'config': []}])
+def test_get_feature_flag_not_found(monkeypatch, configuration) -> None:
+    """Missing group/config (not found or denied) should raise a clear error."""
+
+    fake_api_client = _fake_client(configuration)
+    monkeypatch.setattr(switcher_tools, 'get_api_client', lambda: fake_api_client)
+
+    with pytest.raises(SwitcherApiError, match='not found or is not accessible'):
+        asyncio.run(switcher_tools.get_feature_flag('MY_FLAG', 'Main Domain'))
+
+
+def test_get_feature_flag_propagates_domain_resolution_error(monkeypatch) -> None:
+    """Domain resolution failures should surface without running the query."""
+
+    fake_api_client = AsyncMock()
+    fake_api_client.resolve_domain_id.side_effect = SwitcherApiError('Domain not found', status_code=404)
+    monkeypatch.setattr(switcher_tools, 'get_api_client', lambda: fake_api_client)
+
+    with pytest.raises(SwitcherApiError, match='Domain not found'):
+        asyncio.run(switcher_tools.get_feature_flag('MY_FLAG', 'Nope'))
+
+    fake_api_client.graphql.assert_not_awaited()
 
 def test_get_feature_flag_requires_key() -> None:
     """Tool should reject empty keys before calling the API client."""
