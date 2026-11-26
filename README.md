@@ -190,6 +190,7 @@ Example stdio configuration for an MCP client (e.g. Claude Desktop, VS Code):
 | `list_domains`      | List the domains the authenticated user owns and/or collaborates on.        |
 | `list_environments` | List environment names for a given domain id.                               |
 | `get_feature_flag`  | Get a feature flag's settings (domain, group, config, strategies, `hierarchy_activated`) by key, domain name, and optional environment (default: `default`). |
+| `get_group_flags`   | List all feature flags of a group (each with `hierarchy_activated`) by group name, domain name, and optional environment (default: `default`). |
 
 # Available Prompts
 
@@ -202,6 +203,7 @@ prompts are prefixed with `switcher_` for easy discovery.
 | `switcher_domains`       | `list_domains`       | Discover and summarize the Switcher domains accessible to the authenticated user. |
 | `switcher_environments`  | `list_environments`  | List a Switcher domain's environments. |
 | `switcher_get_feature`   | `get_feature_flag`   | Fetch a Switcher feature flag's settings. |
+| `switcher_get_group_flags` | `get_group_flags` | List all feature flags of a Switcher group. |
 
 # Development
 
