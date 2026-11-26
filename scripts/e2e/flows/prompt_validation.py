@@ -51,27 +51,27 @@ async def _run() -> None:
     print(f'credentials cache:    {config.credentials_path}')
     print()
 
-    print('[1/5] Bootstrapping OAuth credentials headlessly...')
+    print('[1/6] Bootstrapping OAuth credentials headlessly...')
     bootstrap_credentials(config)
     print('      credentials cached ok')
 
     async with mcp_client_session(config) as session:
-        print('[2/5] switcher_mcp_server started and MCP session initialized')
+        print('[2/6] switcher_mcp_server started and MCP session initialized')
 
         prompts_result = await session.list_prompts()
         prompt_names = {prompt.name for prompt in prompts_result.prompts}
-        expected_prompts = {'switcher_domains', 'switcher_environments', 'switcher_get_feature'}
+        expected_prompts = {'switcher_domains', 'switcher_environments', 'switcher_get_feature', 'switcher_get_group_flags'}
         missing_prompts = expected_prompts - prompt_names
         if missing_prompts:
             raise ValidationError(f'Server did not advertise expected prompt(s): {missing_prompts}')
         print(f'      prompts available: {sorted(prompt_names)}')
 
-        print('[3/5] Rendering switcher_domains prompt...')
+        print('[3/6] Rendering switcher_domains prompt...')
         domains_text = await get_prompt_text(session, 'switcher_domains', {'include_collaborations': 'true'})
         _assert_contains(domains_text, 'list_domains', 'switcher_domains')
         print(f'      {domains_text}')
 
-        print('[4/5] Rendering switcher_environments prompt...')
+        print('[4/6] Rendering switcher_environments prompt...')
         environments_text = await get_prompt_text(
             session, 'switcher_environments', {'domain_id': config.domain_name}
         )
@@ -79,7 +79,7 @@ async def _run() -> None:
         _assert_contains(environments_text, config.domain_name, 'switcher_environments')
         print(f'      {environments_text}')
 
-        print('[5/5] Rendering switcher_get_feature prompt...')
+        print('[5/6] Rendering switcher_get_feature prompt...')
         feature_arguments = {'key': config.switcher_key, 'domain': config.domain_name}
         if config.environment:
             feature_arguments['environment'] = config.environment
@@ -90,6 +90,14 @@ async def _run() -> None:
         if config.environment:
             _assert_contains(feature_text, config.environment, 'switcher_get_feature')
         print(f'      {feature_text}')
+
+        print('[6/6] Rendering switcher_get_group_flags prompt...')
+        group_text = await get_prompt_text(
+            session, 'switcher_get_group_flags', {'group': 'Group', 'domain': config.domain_name}
+        )
+        _assert_contains(group_text, 'get_group_flags', 'switcher_get_group_flags')
+        _assert_contains(group_text, config.domain_name, 'switcher_get_group_flags')
+        print(f'      {group_text}')
 
     print('\nE2E PROMPT VALIDATION PASSED')
 

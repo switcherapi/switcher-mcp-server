@@ -165,3 +165,90 @@ def test_switcher_get_feature_prompt_with_environment() -> None:
 
     assert "environment='production'" in text
     assert "environment 'production'" in text
+
+
+def _group_configuration(group_active=True):
+    return {
+        'domain': {'id': 'domain-1', 'name': 'Main Domain', 'version': 1, 'activated': True},
+        'group': [{'_id': 'g1', 'name': 'Group A', 'activated': group_active}],
+        'config': [
+            {'_id': 'c1', 'key': 'FLAG_1', 'activated': True, 'components': ['app'], 'relay': None},
+            {'_id': 'c2', 'key': 'FLAG_2', 'activated': False, 'components': [], 'relay': None},
+        ],
+    }
+
+
+def test_get_group_flags_shapes_response(monkeypatch) -> None:
+    """Tool should list every config in the group with its hierarchy_activated flag."""
+
+    fake_api_client = _fake_client(_group_configuration())
+    monkeypatch.setattr(switcher_tools, 'get_api_client', lambda: fake_api_client)
+
+    result = asyncio.run(switcher_tools.get_group_flags('Group A', 'Main Domain', 'production'))
+
+    assert result['group']['name'] == 'Group A'
+    assert [item['key'] for item in result['configs']] == ['FLAG_1', 'FLAG_2']
+    assert [item['hierarchy_activated'] for item in result['configs']] == [True, False]
+    fake_api_client.resolve_domain_id.assert_awaited_once_with('Main Domain')
+    _, variables = fake_api_client.graphql.await_args.args
+    assert variables == {'domain': 'domain-1', 'group': 'Group A', 'environment': 'production'}
+
+
+def test_get_group_flags_deactivated_group_disables_all_configs(monkeypatch) -> None:
+    """A deactivated group impacts every config under it."""
+
+    fake_api_client = _fake_client(_group_configuration(group_active=False))
+    monkeypatch.setattr(switcher_tools, 'get_api_client', lambda: fake_api_client)
+
+    result = asyncio.run(switcher_tools.get_group_flags('Group A', 'Main Domain'))
+
+    assert all(item['hierarchy_activated'] is False for item in result['configs'])
+    assert fake_api_client.graphql.await_args.args[1]['environment'] == 'default'
+
+
+@pytest.mark.parametrize('configuration', [{}, {'domain': {'id': 'domain-1'}, 'group': None}])
+def test_get_group_flags_not_found(monkeypatch, configuration) -> None:
+    """Missing group (not found or denied) should raise a clear error."""
+
+    fake_api_client = _fake_client(configuration)
+    monkeypatch.setattr(switcher_tools, 'get_api_client', lambda: fake_api_client)
+
+    with pytest.raises(SwitcherApiError, match='not found or is not accessible'):
+        asyncio.run(switcher_tools.get_group_flags('Nope', 'Main Domain'))
+
+
+@pytest.mark.parametrize('args, message', [(('', 'D'), 'group is required'), (('G', ''), 'domain is required')])
+def test_get_group_flags_validates_inputs(args, message) -> None:
+    """Tool should reject empty inputs before calling the API client."""
+
+    with pytest.raises(ValueError, match=message):
+        asyncio.run(switcher_tools.get_group_flags(*args))
+
+
+def test_get_group_flags_tool_and_prompt_are_registered() -> None:
+    """Shared MCP server should expose the tool and prompt, and the prompt should drive the tool."""
+
+    assert 'get_group_flags' in {tool.name for tool in asyncio.run(switcher_tools.mcp.list_tools())}
+    result = asyncio.run(
+        switcher_tools.mcp.get_prompt('switcher_get_group_flags', {'group': 'Group A', 'domain': 'Main Domain'})
+    )
+    text = _prompt_text(result)
+
+    assert 'get_group_flags' in text
+    assert "group='Group A'" in text
+    assert 'default environment' in text
+
+
+def test_switcher_get_group_flags_prompt_with_environment() -> None:
+    """Prompt should mention the explicit environment when provided."""
+
+    result = asyncio.run(
+        switcher_tools.mcp.get_prompt(
+            'switcher_get_group_flags',
+            {'group': 'Group A', 'domain': 'Main Domain', 'environment': 'production'},
+        )
+    )
+    text = _prompt_text(result)
+
+    assert "environment='production'" in text
+    assert "environment 'production'" in text

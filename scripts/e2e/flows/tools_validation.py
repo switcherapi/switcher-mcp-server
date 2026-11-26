@@ -40,22 +40,22 @@ async def _run() -> None:
     print(f'credentials cache:    {config.credentials_path}')
     print()
 
-    print('[1/5] Bootstrapping OAuth credentials headlessly...')
+    print('[1/6] Bootstrapping OAuth credentials headlessly...')
     bootstrap_credentials(config)
     print('      credentials cached ok')
 
     async with mcp_client_session(config) as session:
-        print('[2/5] switcher_mcp_server started and MCP session initialized')
+        print('[2/6] switcher_mcp_server started and MCP session initialized')
 
         tools_result = await session.list_tools()
         tool_names = {tool.name for tool in tools_result.tools}
-        expected_tools = {'list_domains', 'list_environments', 'get_feature_flag'}
+        expected_tools = {'list_domains', 'list_environments', 'get_feature_flag', 'get_group_flags'}
         missing_tools = expected_tools - tool_names
         if missing_tools:
             raise ValidationError(f'Server did not advertise expected tool(s): {missing_tools}')
         print(f'      tools available: {sorted(tool_names)}')
 
-        print('[3/5] Calling list_domains...')
+        print('[3/6] Calling list_domains...')
         domains = await call_tool(session, 'list_domains')
         matching_domain = next(
             (domain for domain in domains if domain.get('name') == config.domain_name),
@@ -68,11 +68,11 @@ async def _run() -> None:
             )
         print(f"      found domain '{config.domain_name}' (id={matching_domain.get('id')})")
 
-        print('[4/5] Calling list_environments...')
+        print('[4/6] Calling list_environments...')
         environments = await call_tool(session, 'list_environments', {'domain_id': matching_domain['id']})
         print(f'      environments: {environments}')
 
-        print('[5/5] Calling get_feature_flag...')
+        print('[5/6] Calling get_feature_flag...')
         flag = await call_tool(
             session,
             'get_feature_flag',
@@ -88,6 +88,18 @@ async def _run() -> None:
         if not isinstance(flag.get('hierarchy_activated'), bool):
             raise ValidationError(f"'hierarchy_activated' field is not a boolean: {flag.get('hierarchy_activated')!r}")
         print(f"      flag '{config_info['key']}' hierarchy_activated={flag['hierarchy_activated']}")
+
+        print('[6/6] Calling get_group_flags...')
+        group_name = (flag.get('group') or {}).get('name')
+        group_flags = await call_tool(
+            session,
+            'get_group_flags',
+            {'group': group_name, 'domain': config.domain_name, 'environment': config.environment},
+        )
+        group_keys = [item.get('key') for item in group_flags.get('configs') or []]
+        if config.switcher_key not in group_keys:
+            raise ValidationError(f"Flag '{config.switcher_key}' missing from group '{group_name}': {group_keys}")
+        print(f"      group '{group_name}' has {len(group_keys)} flag(s)")
 
     print('\nE2E VALIDATION PASSED')
 

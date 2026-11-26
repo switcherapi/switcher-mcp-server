@@ -39,6 +39,16 @@ STRATEGY_FIELDS = """
     activated
 """
 
+CONFIGURATION_BY_GROUP_QUERY = f"""
+query ConfigurationByGroup($domain: String!, $group: String, $environment: String) {{
+    configuration(domain: $domain, group: $group, environment: $environment) {{
+        domain {{{DOMAIN_FIELDS}}}
+        group {{{GROUP_FIELDS}}}
+        config {{{CONFIG_FIELDS}}}
+    }}
+}}
+"""
+
 CONFIGURATION_BY_KEY_QUERY = f"""
 query ConfigurationByKey($domain: String!, $key: String, $environment: String) {{
     configuration(domain: $domain, key: $key, environment: $environment) {{
