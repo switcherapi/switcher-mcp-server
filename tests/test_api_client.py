@@ -70,23 +70,6 @@ def test_list_environments_passes_domain_id_query_parameter(httpx_mock) -> None:
         asyncio.run(client.aclose())
 
 
-def test_get_config_by_key_includes_domain_and_environment_query(httpx_mock) -> None:
-    """Config retrieval should pass the domain and optional environment query parameters."""
-
-    client = SwitcherApiClient(token_provider=_static_token_provider)
-    httpx_mock.add_response(
-        method='GET',
-        url='http://127.0.0.1:3000/config/key/sample-flag?domain=Main%20Domain&environment=production',
-        json={'key': 'sample-flag', 'enabled': True},
-    )
-
-    try:
-        config = asyncio.run(client.get_config_by_key('sample-flag', 'Main Domain', 'production'))
-        assert config == {'key': 'sample-flag', 'enabled': True}
-    finally:
-        asyncio.run(client.aclose())
-
-
 def test_api_client_raises_switcher_api_error_for_non_success_responses(httpx_mock) -> None:
     """Non-2xx responses should raise a descriptive API error."""
 
@@ -241,10 +224,10 @@ def test_api_client_does_not_close_injected_http_client(httpx_mock) -> None:
 
     http_client = httpx.AsyncClient(base_url='http://127.0.0.1:3000')
     client = SwitcherApiClient(token_provider=_static_token_provider, http_client=http_client)
-    httpx_mock.add_response(method='GET', url='http://127.0.0.1:3000/config/key/flag?domain=Main', json={})
+    httpx_mock.add_response(method='GET', url='http://127.0.0.1:3000/domain', json=[])
 
     try:
-        asyncio.run(client.get_config_by_key('flag', 'Main'))
+        asyncio.run(client.list_domains())
         asyncio.run(client.aclose())
         assert not http_client.is_closed
     finally:

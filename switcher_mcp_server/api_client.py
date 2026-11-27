@@ -112,20 +112,6 @@ class SwitcherApiClient:
 
         return await self._request_json('GET', '/environment', params={'domain': domain_id})
 
-    async def get_config_by_key(
-        self,
-        key: str,
-        domain_name: str,
-        environment: str | None = None,
-    ) -> dict[str, Any]:
-        """Fetch a Switcher configuration document by key and domain context."""
-
-        params: dict[str, str] = {'domain': domain_name}
-        if environment:
-            params['environment'] = environment
-
-        return await self._request_json('GET', f'/config/key/{key}', params=params)
-
     async def graphql(self, query: str, variables: dict[str, Any] | None = None) -> dict[str, Any]:
         """Execute a GraphQL query against the admin GraphQL API and return its ``data`` payload."""
 
